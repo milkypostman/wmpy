@@ -17,7 +17,7 @@ HISTORYSIZE=5
 client = pyxp.Wmii('unix!/tmp/ns.dcurtis.:0/wmii')
 
 apps = {
-        'terminal': 'gnome-terminal',
+        'terminal': 'xterm',
 }
 
 tags = { 'main' : 1,

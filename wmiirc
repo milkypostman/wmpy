@@ -6,13 +6,18 @@ wmiirc-python :: foolish attempt
 
 import wmii
 import logging
+import socket
+
 class Filter:
     def filter(self, rec): return False
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger('py9').addFilter(Filter())
-    print(logging.getLogger().filters)
+
+    hostname = socket.gethostname()
+    wmii.apps['terminal'] = 'urxvtc'
+
     wmii.mainloop()
 
 if __name__ == '__main__':
