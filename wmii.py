@@ -46,24 +46,31 @@ _tagname = {}
 _tagname_reserved = {}
 _tagidxname = ()
 
-def getctl(name):
+def get_ctl(name):
     global client
     for line in client.read('/ctl').split('\n'):
         if line.startswith(name):
             return line[line.find(' ')+1:]
 
-def setctl(name, value = None):
+def set_ctl(name, value = None):
     global client
     if value == None and isinstance(name, dict):
         client.write('/ctl', '\n'.join( (' '.join((n, v)) for n,v in name.iteritems()) ))
     else:
         client.write('/ctl',' '.join((name,value)))
 
-def settagidx(idx):
+def set_tag_idx(idx):
     if idx in _tagname_reserved:
-        setctl('view', _tagname_reserved[idx])
-    if idx in _tagname:
-        setctl('view', _tagname[idx])
+        set_ctl('view', _tagname_reserved[idx])
+    elif idx in _tagname:
+        set_ctl('view', _tagname[idx])
+
+def set_client_tag_idx(idx):
+    global client
+    if idx in _tagname_reserved:
+        client.write('/client/sel/tags', _tagname_reserved[idx])
+    elif idx in _tagname:
+        client.write('/client/sel/tags', _tagname[idx])
 
 _programlist = None
 def update_programlist():
@@ -135,7 +142,8 @@ keybindings = {
         'Mod1-m':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack+max'),
         'Mod1-comma':lambda _: setviewofs(-1),
         'Mod1-period':lambda _: setviewofs(1),
-        'Mod4-#':lambda key: settagidx(int(key[key.find('-')+1:])),
+        'Mod4-#':lambda key: set_tag_idx(int(key[key.rfind('-')+1:])),
+        'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1:])),
         'Mod1-Shift-c':lambda _: client.write('/client/sel/ctl', 'kill'),
         'Mod1-Return':lambda _: execute(apps['terminal']),
         }
@@ -161,12 +169,12 @@ def setviewofs(ofs):
     global client
     global _tagidx
 
-    view = getctl('view')
+    view = get_ctl('view')
     idx = _tagidxname.index( (_tagidx[view], view) )
 
     idx,view = _tagidxname[(idx + ofs) % len(_tagidxname)]
 
-    setctl('view', view)
+    set_ctl('view', view)
 
 def _obtaintagidx():
     global _tagidxheap
@@ -183,7 +191,7 @@ def event_leftbarclick(button, id):
         idx = int(id[:div])
         tag = id[div+1:]
         if _tagname[idx] == tag:
-            setctl('view', tag)
+            set_ctl('view', tag)
     except ValueError:
         return
 
@@ -193,7 +201,8 @@ def event_key(key):
     if callable(func):
         func(key)
     else:
-        numkey = re.sub('-\d*', '-#', key)
+        numkey = re.sub('-\d*$', '-#', key)
+        print numkey
         func = keybindings.get(numkey, None)
         if callable(func):
             func(key)
@@ -252,7 +261,7 @@ def _initialize_tags():
     for i in client.ls('/lbar'):
         client.remove('/'.join(('/lbar', i)))
 
-    focusedtag = getctl('view')
+    focusedtag = get_ctl('view')
     print focusedtag
 
     for tag, idx in tags.iteritems():
@@ -273,9 +282,9 @@ def _initialize_tags():
         _tagidx[tag] = idx
         _tagname[idx] = tag
         if tag == focusedtag:
-            color = getctl('focuscolors')
+            color = get_ctl('focuscolors')
         else:
-            color = getctl('normcolors')
+            color = get_ctl('normcolors')
 
         client.create(''.join(['/lbar/', str(idx), '_', tag]), ' '.join((color, tag)))
 
@@ -288,7 +297,7 @@ def _configure():
     if 'focuscolors' not in config:
         config['focuscolors'] = ' '.join((colors['fg_focus'], colors['bg_focus'], colors['border_focus']))
 
-    setctl(config)
+    set_ctl(config)
 
 
 plugins = []
