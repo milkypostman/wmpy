@@ -8,7 +8,6 @@ import os
 import sys
 import signal
 import logging
-logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('wmii')
 
 HOME=os.path.join(os.getenv('HOME'), '.wmii-hg')
@@ -106,11 +105,11 @@ def program_menu():
 
     if prog:
         execute(prog).pid
-        #log.debug("program %s started with pid %d..." % (prog, pid))
+        log.debug("program %s started with pid %d..." % (prog, pid))
 
 def restart():
     global _running
-    subprocess.Popen(os.path.expandvars("$HOME/.wmii-hg/wmiirc"))
+    execute(os.path.expandvars("$HOME/.wmii-hg/wmiirc"))
     _running = False
 
 def quit():
@@ -156,12 +155,12 @@ def menu(prompt, entries):
 
     return out
 
-def execute(cmd):
+def execute(cmd, shell=True):
     setsid = getattr(os, 'setsid', None)
     if not setsid:
         setsid = getattr(os, 'setpgrp', None)
 
-    return subprocess.Popen(cmd, shell=True, preexec_fn=setsid)
+    return subprocess.Popen(cmd, shell=shell, preexec_fn=setsid)
 
 keybindings = {
         'Mod1-p':lambda _: program_menu(),
@@ -235,13 +234,12 @@ def event_leftbarclick(button, id):
         return
 
 def event_key(key):
-    #log.debug('key event: %s' % key)
+    log.debug('key event: %s' % key)
     func = keybindings.get(key, None)
     if callable(func):
         func(key)
     else:
         numkey = re.sub('-\d*$', '-#', key)
-        print numkey
         func = keybindings.get(numkey, None)
         if callable(func):
             func(key)
@@ -313,16 +311,12 @@ def _initialize_tags():
         client.remove('/'.join(('/lbar', i)))
 
     focusedtag = get_ctl('view')
-    print focusedtag
 
     for tag, idx in tags.iteritems():
         _tagname_reserved[idx] = tag
 
-    print _tagname_reserved
     _tagidxheap = [i for i in range(1,10) if i not in _tagname_reserved]
     heapq.heapify(_tagidxheap)
-
-    print _tagidxheap
 
     for tag in filter(lambda n: n != 'sel', client.ls('/tag')):
         if tag in tags:
@@ -379,6 +373,9 @@ def process_event(event):
     for handler in events.get(event, []):
         handler(*rest)
 
+def _wmiir():
+    return subprocess.Popen(('wmiir','read','/event'), stdout=subprocess.PIPE)
+
 def mainloop():
     global client, _running
 
@@ -394,23 +391,30 @@ def mainloop():
 
     _load_plugins()
 
-    eventproc = subprocess.Popen(('wmiir','read','/event'), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-    while _running:
-        timeout = 1
+    eventproc = _wmiir()
+    try:
         while _running:
-            s = time.time()
-            rdy, _, _ = select.select([eventproc.stdout], [], [], timeout)
-            if not rdy:
-                break
-            e = time.time()
+            timeout = 1
+            while _running:
+                s = time.time()
+                try:
+                    rdy, _, _ = select.select([eventproc.stdout], [], [], timeout)
+                except select.error:
+                    log.warning("Detected wmiir server crash, restarting...")
+                    eventproc = _wmiir()
+                    break
+                if not rdy:
+                    break
+                e = time.time()
 
-            line = rdy[0].readline()
-            process_event(line)
+                line = rdy[0].readline()
+                if line:
+                    process_event(line)
 
-            timeout -= e-s
-
-    os.kill(eventproc.pid, signal.SIGHUP)
-    print "Exiting..."
+                timeout -= e-s
+    finally:
+        os.kill(eventproc.pid, signal.SIGHUP)
+    log.debug("Exiting...")
 
 
 if __name__ == '__main__':
