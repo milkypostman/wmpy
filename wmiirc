@@ -17,6 +17,8 @@ def main():
 
     hostname = socket.gethostname()
     wmii.apps['terminal'] = 'urxvtc'
+    if hostname.find('divms') > -1:
+        wmii.apps['terminal'] = 'gnome-terminal'
 
     wmii.mainloop()
 

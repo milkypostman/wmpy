@@ -6,6 +6,7 @@ import re
 import select
 import os
 import sys
+import signal
 import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('wmii')
@@ -35,16 +36,29 @@ colors = {
 }
 
 config = {
+        'font': '-*-terminus-*-*-*-*-*-*-*-*-*-*-*-*',
         'bar': 'on top',
         'grabmod': 'Mod1',
         'view': 'main',
         }
+
+colrules = {
+    'main' : '65+35',
+}
+
+tagrules = {
+    'Firefox.*': 'www',
+    'Gimp.*': 'gimp',
+    'MPlayer.*': '~',
+}
 
 _tagidxheap = []
 _tagidx = {}
 _tagname = {}
 _tagname_reserved = {}
 _tagidxname = ()
+
+_running = True
 
 def get_ctl(name):
     global client
@@ -91,6 +105,26 @@ def program_menu():
     if prog:
         execute(prog).pid
         #log.debug("program %s started with pid %d..." % (prog, pid))
+
+def restart():
+    global _running
+    subprocess.Popen(os.path.expandvars("$HOME/.wmii-hg/wmiirc"))
+    _running = False
+
+def quit():
+    global _running
+    _running = False
+    client.write('/ctl', 'quit')
+
+actions = {
+    'wmiirc':restart,
+    'quit':quit,
+}
+
+def action_menu():
+    action = menu('action', actions.keys())
+    if action in actions and callable(actions[action]):
+        actions[action]()
 
 def menu(prompt, entries):
     histfn = os.path.join(HOME,'history.%s' % prompt)
@@ -146,6 +180,9 @@ keybindings = {
         'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1:])),
         'Mod1-Shift-c':lambda _: client.write('/client/sel/ctl', 'kill'),
         'Mod1-Return':lambda _: execute(apps['terminal']),
+        'Mod1-a':lambda _: action_menu(),
+        'Mod1-space':lambda _: client.write('/tag/sel/ctl', 'select toggle'),
+        'Mod1-Shift-space':lambda _: client.write('/tag/sel/ctl', 'send sel toggle'),
         }
 
 def _update_keys():
@@ -245,6 +282,17 @@ def event_destroytag(tag):
     _tagidxname = sorted(_tagname.iteritems())
     client.remove(''.join(['/lbar/', str(idx), '_', tag]))
 
+def event_start(*vargs):
+    global _running
+
+    if len(vargs) < 2:
+        return
+
+    if vargs[1] == 'wmpy' and int(vargs[2]) == os.getpid():
+        return
+
+    _running = False
+
 events = {
         'Key': [event_key],
         'FocusTag': [event_focustag],
@@ -252,6 +300,7 @@ events = {
         'CreateTag': [event_createtag],
         'DestroyTag': [event_destroytag],
         'LeftBarClick': [event_leftbarclick],
+        'Start': [event_start],
         }
 
 def _initialize_tags():
@@ -299,6 +348,18 @@ def _configure():
 
     set_ctl(config)
 
+    cr = []
+    for regex, width in colrules.iteritems():
+        cr.append('/' + regex + '/ -> ' + width)
+
+    client.write('/colrules', '\n'.join(cr) + '\n')
+
+    tr = []
+    for regex, tag in tagrules.iteritems():
+        tr.append('/' + regex + '/ -> ' + tag)
+
+    client.write('/tagrules', '\n'.join(tr) + '\n')
+
 
 plugins = []
 def _load_plugins():
@@ -317,9 +378,11 @@ def process_event(event):
         handler(*rest)
 
 def mainloop():
-    global client
+    global client, _running
 
     sys.path.append(os.path.expandvars('$HOME/.wmii-hg/plugins'))
+
+    client.write ('/event', 'Start wmiirc ' + str(os.getpid()))
 
     _configure()
 
@@ -329,10 +392,10 @@ def mainloop():
 
     _load_plugins()
 
-    eventproc = subprocess.Popen(("wmiir","read","/event"), stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-    while True:
-        timeout = 5
-        while True:
+    eventproc = subprocess.Popen(('wmiir','read','/event'), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    while _running:
+        timeout = 1
+        while _running:
             s = time.time()
             rdy, _, _ = select.select([eventproc.stdout], [], [], timeout)
             if not rdy:
@@ -343,6 +406,9 @@ def mainloop():
             process_event(line)
 
             timeout -= e-s
+
+    os.kill(eventproc.pid, signal.SIGHUP)
+    print "Exiting..."
 
 
 if __name__ == '__main__':
