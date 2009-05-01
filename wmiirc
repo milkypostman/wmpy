@@ -19,6 +19,14 @@ def main():
     wmii.apps['terminal'] = 'urxvtc'
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'
+    if hostname.find('murdock') > -1:
+        wmii.colors['normfg'] = '#FFFFFF'
+        wmii.colors['normbg'] = '#222222'
+        wmii.colors['normborder'] = '#333333'
+        wmii.colors['focusfg'] = '#FFFFaa'
+        wmii.colors['focusbg'] = '#007700'
+        wmii.colors['focusborder'] = '#88ff88'
+
 
     wmii.mainloop()
 

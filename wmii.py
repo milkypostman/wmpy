@@ -27,12 +27,12 @@ tags = { 'main' : 1,
 
 
 colors = {
-    'fg_normal' : '#000000',
-    'bg_normal' : '#c1c48b',
-    'border_normal': '#81654f',
-    'fg_focus' : '#000000',
-    'bg_focus' : '#81654f',
-    'border_focus': '#000000',
+    'normfg' : '#000000',
+    'normbg' : '#c1c48b',
+    'normborder': '#81654f',
+    'focusfg' : '#000000',
+    'focusbg' : '#81654f',
+    'focusborder': '#000000',
 }
 
 config = {
@@ -40,6 +40,8 @@ config = {
         'bar': 'on top',
         'grabmod': 'Mod1',
         'view': 'main',
+        #incmode = (ignore|show)
+        'incmode': 'ignore',
         }
 
 colrules = {
@@ -342,9 +344,9 @@ def _initialize_tags():
 def _configure():
     global client
     if 'normcolors' not in config:
-        config['normcolors'] = ' '.join((colors['fg_normal'], colors['bg_normal'], colors['border_normal']))
+        config['normcolors'] = ' '.join((colors['normfg'], colors['normbg'], colors['normborder']))
     if 'focuscolors' not in config:
-        config['focuscolors'] = ' '.join((colors['fg_focus'], colors['bg_focus'], colors['border_focus']))
+        config['focuscolors'] = ' '.join((colors['focusfg'], colors['focusbg'], colors['focusborder']))
 
     set_ctl(config)
 
