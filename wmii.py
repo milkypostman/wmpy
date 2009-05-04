@@ -6,6 +6,7 @@ import re
 import select
 import os
 import sys
+import plugin
 import signal
 import logging
 log = logging.getLogger('wmii')
@@ -307,9 +308,6 @@ def _initialize_tags():
     global _tagidx, _tagname, _tagidxname, _tagidxheap, _tagname_reserved
     global client
 
-    for i in client.ls('/lbar'):
-        client.remove('/'.join(('/lbar', i)))
-
     focusedtag = get_ctl('view')
 
     for tag, idx in tags.iteritems():
@@ -356,12 +354,27 @@ def _configure():
 
     client.write('/tagrules', '\n'.join(tr) + '\n')
 
+timers = []
+def schedule(timeout, func):
+    global timers
+    if callable(func):
+        heapq.heappush( timers, (timeout+time.time(), func) )
 
-plugins = []
-def _load_plugins():
-    global plugins
-    plugin = __import__('clock').plugin()
-    plugins.append(plugin)
+def process_timers():
+    global timers
+    curtime = time.time()
+    while timers[0][0] < curtime:
+        timeout, func = heapq.heappop(timers)
+        func()
+
+    return timers[0][0]
+
+widgets = {}
+def register_widget(widget, name):
+    widgets[name] = widget
+
+def register_plugin(plugin):
+    plugin.init()
 
 def process_event(event):
     global events
@@ -373,6 +386,13 @@ def process_event(event):
     for handler in events.get(event, []):
         handler(*rest)
 
+def _clearbar():
+    for i in client.ls('/lbar'):
+        client.remove('/'.join(('/lbar', i)))
+
+    for i in client.ls('/rbar'):
+        client.remove('/'.join(('/rbar', i)))
+
 def _wmiir():
     return subprocess.Popen(('wmiir','read','/event'), stdout=subprocess.PIPE)
 
@@ -383,18 +403,19 @@ def mainloop():
 
     client.write ('/event', 'Start wmiirc ' + str(os.getpid()))
 
+    _clearbar()
+
     _configure()
 
     _initialize_tags()
 
     _update_keys()
 
-    _load_plugins()
-
     eventproc = _wmiir()
     try:
         while _running:
-            timeout = 1
+            timeout = process_timers() - time.time()
+
             while _running:
                 s = time.time()
                 try:
@@ -419,3 +440,19 @@ def mainloop():
 
 if __name__ == '__main__':
     mainloop()
+
+class Widget():
+    def __init__(self, name, bar='rbar'):
+        self.name = name
+        self.visible = False
+        self.bar = bar
+
+    def show(self, message, fg=None, bg=None, border=None):
+        if self.visible:
+            client.write('/%s/%s' % (self.bar, self.name), message)
+        else:
+            client.create('/%s/%s' % (self.bar, self.name), message)
+
+    def hide(self):
+        client.remove('/%s/%s' % (self.bar, self.name))
+

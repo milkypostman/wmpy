@@ -8,18 +8,23 @@ import wmii
 import logging
 import os
 import socket
+import plugins
 
-class Filter:
-    def filter(self, rec): return False
+#class Filter:
+    #def filter(self, rec): return False
 
 def main():
     logging.basicConfig(level=logging.DEBUG, filename = os.path.expandvars("$HOME/.wmii-hg/log"))
 
+
     hostname = socket.gethostname()
+
+
     wmii.apps['terminal'] = 'urxvtc'
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'
-    if hostname.find('murdock') > -1:
+
+    if hostname in ['hannibal', 'baracus']:
         wmii.colors['normfg'] = '#FFFFFF'
         wmii.colors['normbg'] = '#222222'
         wmii.colors['normborder'] = '#333333'
@@ -27,6 +32,9 @@ def main():
         wmii.colors['focusbg'] = '#007700'
         wmii.colors['focusborder'] = '#88ff88'
 
+    clock = plugins.Clock()
+
+    wmii.register_plugin(clock)
 
     wmii.mainloop()
 
