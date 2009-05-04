@@ -32,9 +32,11 @@ def main():
         wmii.colors['focusbg'] = '#007700'
         wmii.colors['focusborder'] = '#88ff88'
 
+    volume = plugins.Volume()
     clock = plugins.Clock()
 
     wmii.register_plugin(clock)
+    wmii.register_plugin(volume)
 
     wmii.mainloop()
 

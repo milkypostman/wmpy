@@ -229,10 +229,15 @@ def event_leftbarclick(button, id):
     try:
         idx = int(id[:div])
         tag = id[div+1:]
-        if _tagname[idx] == tag:
+        if idx in _tagname and _tagname[idx] == tag:
             set_ctl('view', tag)
     except ValueError:
         return
+
+def event_rightbarclick(button, id):
+    global _widgets
+    if id in _widgets:
+        _widgets[id].clicked(button)
 
 def event_key(key):
     log.debug('key event: %s' % key)
@@ -301,6 +306,7 @@ events = {
         'CreateTag': [event_createtag],
         'DestroyTag': [event_destroytag],
         'LeftBarClick': [event_leftbarclick],
+        'RightBarClick': [event_rightbarclick],
         'Start': [event_start],
         }
 
@@ -354,24 +360,24 @@ def _configure():
 
     client.write('/tagrules', '\n'.join(tr) + '\n')
 
-timers = []
+_timers = []
 def schedule(timeout, func):
-    global timers
+    global _timers
     if callable(func):
-        heapq.heappush( timers, (timeout+time.time(), func) )
+        heapq.heappush( _timers, (timeout+time.time(), func) )
 
 def process_timers():
-    global timers
+    global _timers
     curtime = time.time()
-    while timers[0][0] < curtime:
-        timeout, func = heapq.heappop(timers)
+    while _timers[0][0] < curtime:
+        timeout, func = heapq.heappop(_timers)
         func()
 
-    return timers[0][0]
+    return _timers[0][0]
 
-widgets = {}
-def register_widget(widget, name):
-    widgets[name] = widget
+_widgets = {}
+def register_widget(widget):
+    _widgets[widget.name] = widget
 
 def register_plugin(plugin):
     plugin.init()
@@ -388,10 +394,12 @@ def process_event(event):
 
 def _clearbar():
     for i in client.ls('/lbar'):
-        client.remove('/'.join(('/lbar', i)))
+        if i not in _widgets:
+            client.remove('/'.join(('/lbar', i)))
 
     for i in client.ls('/rbar'):
-        client.remove('/'.join(('/rbar', i)))
+        if i not in _widgets:
+            client.remove('/'.join(('/rbar', i)))
 
 def _wmiir():
     return subprocess.Popen(('wmiir','read','/event'), stdout=subprocess.PIPE)
@@ -449,10 +457,13 @@ class Widget():
 
     def show(self, message, fg=None, bg=None, border=None):
         if self.visible:
-            client.write('/%s/%s' % (self.bar, self.name), message)
+            client.write('/%s/%s' % (self.bar, self.name), str(message))
         else:
-            client.create('/%s/%s' % (self.bar, self.name), message)
+            client.create('/%s/%s' % (self.bar, self.name), str(message))
 
     def hide(self):
         client.remove('/%s/%s' % (self.bar, self.name))
+
+    def clicked(self, button):
+        pass
 
