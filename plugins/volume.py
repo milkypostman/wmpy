@@ -23,7 +23,12 @@ class Volume():
 
         self.update()
 
-    def update(self, reschedule=True):
+    def update(self):
+        print "update vol"
+        self._update()
+        wmii.schedule(5, self.update)
+
+    def _update(self):
         self.current = self.mixer.get(self.device_mask)
         avg = reduce(operator.add, self.current)/2
 
@@ -35,15 +40,13 @@ class Volume():
 
         self.widget.fg = fg
         self.widget.show("%d%%" % self.current[0])
-        if reschedule:
-            wmii.schedule(4, self.update)
 
     def widget_clicked(self, button):
-        if button == '5':
+        if button == 5:
             newval =  map(lambda v: max(v-2, 0), self.current)
             self.mixer.set(self.device_mask, newval)
-            self.update(False)
-        elif button == '4':
+            self._update()
+        elif button == 4:
             newval =  map(lambda v: min(v+2, 100), self.current)
             self.mixer.set(self.device_mask, newval)
-            self.update(False)
+            self._update()

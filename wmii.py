@@ -242,6 +242,7 @@ def event_leftbarclick(button, id):
 
 def event_rightbarclick(button, id):
     global _widgets
+    button = int(button)
     if id in _widgets:
         _widgets[id].clicked(button)
 
@@ -433,6 +434,8 @@ def mainloop():
     try:
         while _running:
             timeout = process_timers() - time.time()
+            if timeout < 0:
+                timeout = 0
 
             while _running:
                 s = time.time()

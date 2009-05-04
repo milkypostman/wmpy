@@ -36,6 +36,9 @@ def main():
     clock = plugins.Clock()
     wmii.register_plugin(clock)
 
+    mpd = plugins.MPD()
+    wmii.register_plugin(mpd)
+
     wmii.mainloop()
 
 if __name__ == '__main__':

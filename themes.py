@@ -22,4 +22,6 @@ green = {
         'volume_fglow' : '#cccccc',
         'volume_fgmed' : '#00cc00',
         'volume_fghigh' : '#cc0000',
+
+        'mpd_fg' : '#FFFFaa',
         }
