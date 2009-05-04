@@ -17,15 +17,17 @@ HISTORYSIZE=5
 #log.debug('creating new instance of client')
 client = pyxp.Wmii('unix!/tmp/ns.dcurtis.:0/wmii')
 
+# applications
 apps = {
         'terminal': 'xterm',
 }
 
+# pre-allocated tags
 tags = { 'main' : 1,
         'www' : 2,
         }
 
-
+# initialize default colors
 colors = {
     'normfg' : '#000000',
     'normbg' : '#c1c48b',
@@ -35,6 +37,7 @@ colors = {
     'focusborder': '#000000',
 }
 
+# initialize base config
 config = {
         'font': '-*-terminus-*-*-*-*-*-*-*-*-*-*-*-*',
         'bar': 'on top',
@@ -44,15 +47,18 @@ config = {
         'incmode': 'ignore',
         }
 
+# default colrules
 colrules = {
     'main' : '65+35',
 }
 
+# default tagrules
 tagrules = {
     'Firefox.*': 'www',
     'Gimp.*': 'gimp',
     'MPlayer.*': '~',
 }
+
 
 _tagidxheap = []
 _tagidx = {}
@@ -375,12 +381,22 @@ def process_timers():
 
     return _timers[0][0]
 
+def set_theme(theme):
+    colors.update(theme)
+
 _widgets = {}
 def register_widget(widget):
     _widgets[widget.name] = widget
 
+_plugins = []
 def register_plugin(plugin):
-    plugin.init()
+    global _plugins
+    _plugins.append(plugin)
+
+def _initialize_plugins():
+    global _plugins
+    for p in _plugins:
+        p.init()
 
 def process_event(event):
     global events
@@ -394,12 +410,10 @@ def process_event(event):
 
 def _clearbar():
     for i in client.ls('/lbar'):
-        if i not in _widgets:
-            client.remove('/'.join(('/lbar', i)))
+        client.remove('/'.join(('/lbar', i)))
 
     for i in client.ls('/rbar'):
-        if i not in _widgets:
-            client.remove('/'.join(('/rbar', i)))
+        client.remove('/'.join(('/rbar', i)))
 
 def _wmiir():
     return subprocess.Popen(('wmiir','read','/event'), stdout=subprocess.PIPE)
@@ -407,16 +421,12 @@ def _wmiir():
 def mainloop():
     global client, _running
 
-    sys.path.append(os.path.expandvars('$HOME/.wmii-hg/plugins'))
-
     client.write ('/event', 'Start wmiirc ' + str(os.getpid()))
 
     _clearbar()
-
     _configure()
-
     _initialize_tags()
-
+    _initialize_plugins()
     _update_keys()
 
     eventproc = _wmiir()
@@ -454,12 +464,16 @@ class Widget():
         self.name = name
         self.visible = False
         self.bar = bar
+        self.fg = colors['normfg']
+        self.bg = colors['normbg']
+        self.border = colors['normborder']
 
-    def show(self, message, fg=None, bg=None, border=None):
+    def show(self, message):
+        colors = ' '.join((self.fg, self.bg, self.border))
         if self.visible:
-            client.write('/%s/%s' % (self.bar, self.name), str(message))
+            client.write('/%s/%s' % (self.bar, self.name), ' '.join((colors, message)))
         else:
-            client.create('/%s/%s' % (self.bar, self.name), str(message))
+            client.create('/%s/%s' % (self.bar, self.name), ' '.join((colors, message)))
 
     def hide(self):
         client.remove('/%s/%s' % (self.bar, self.name))

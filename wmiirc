@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-wmiirc-python :: foolish attempt
+wmpy :: foolish attempt
 """
 
 import wmii
@@ -9,6 +9,7 @@ import logging
 import os
 import socket
 import plugins
+import themes
 
 #class Filter:
     #def filter(self, rec): return False
@@ -16,27 +17,24 @@ import plugins
 def main():
     logging.basicConfig(level=logging.DEBUG, filename = os.path.expandvars("$HOME/.wmii-hg/log"))
 
-
     hostname = socket.gethostname()
-
 
     wmii.apps['terminal'] = 'urxvtc'
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'
 
+    wmii.set_theme(themes.default)
     if hostname in ['hannibal', 'baracus']:
-        wmii.colors['normfg'] = '#FFFFFF'
-        wmii.colors['normbg'] = '#222222'
-        wmii.colors['normborder'] = '#333333'
-        wmii.colors['focusfg'] = '#FFFFaa'
-        wmii.colors['focusbg'] = '#007700'
-        wmii.colors['focusborder'] = '#88ff88'
+        wmii.set_theme(themes.green)
 
-    volume = plugins.Volume()
-    clock = plugins.Clock()
-
-    wmii.register_plugin(clock)
+    volume = plugins.Volume(name='805_volume_1')
     wmii.register_plugin(volume)
+
+    volume = plugins.Volume(name='805_volume_2', device="PCM")
+    wmii.register_plugin(volume)
+
+    clock = plugins.Clock()
+    wmii.register_plugin(clock)
 
     wmii.mainloop()
 
