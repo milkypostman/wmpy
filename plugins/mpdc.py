@@ -1,9 +1,13 @@
 import wmii
-import mpd
 import socket
 
+try:
+    import mpd
+except ImportError:
+    mpd = None
+
 class MPD:
-    def __init__(self, name='0_mpd', format="%(artist)s - %(title)s", hostname='localhost', port=6600, bar='rbar'):
+    def __init__(self, name='1_mpd', format="%(artist)s - %(title)s", hostname='localhost', port=6600, bar='rbar'):
         self.format = format
         self.bar = bar
         self.name = name
@@ -12,6 +16,10 @@ class MPD:
         self._mpd = None
 
     def init(self):
+        if mpd is None:
+            wmii.unregister_plugin(self)
+            return
+
         self.widget = wmii.Widget(self.name, self.bar)
         wmii.register_widget(self.widget)
         self.widget.clicked = self.widget_clicked
@@ -87,3 +95,4 @@ class MPD:
             self._buttons[button]()
 
         self._update()
+

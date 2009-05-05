@@ -27,17 +27,28 @@ def main():
     if hostname in ['hannibal', 'baracus']:
         wmii.set_theme(themes.green)
 
-    volume = plugins.Volume(name='805_volume_1')
-    wmii.register_plugin(volume)
+    if hostname in ['murdock']:
+        volume = plugins.Volume(name='805_volume', device="LineOut")
+        wmii.register_plugin(volume)
 
-    volume = plugins.Volume(name='805_volume_2', device="PCM")
-    wmii.register_plugin(volume)
+        battery = plugins.Battery()
+        wmii.register_plugin(battery)
+    else:
+        volume = plugins.Volume(name='805_volume_1')
+        wmii.register_plugin(volume)
+
+        volume = plugins.Volume(name='805_volume_2', device="PCM")
+        wmii.register_plugin(volume)
 
     clock = plugins.Clock()
     wmii.register_plugin(clock)
 
-    mpd = plugins.MPD()
-    wmii.register_plugin(mpd)
+    if hostname in ['baracus']:
+        mpd = plugins.MPD()
+        wmii.register_plugin(mpd)
+
+    weather = plugins.Weather()
+    wmii.register_plugin(weather)
 
     wmii.mainloop()
 

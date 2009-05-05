@@ -1,19 +1,32 @@
 import wmii
 import time
-import ossaudiodev
+import math
+
+try:
+    import alsaaudio
+except ImportError:
+    alsaaudio = None
+
 import operator
 
 class Volume():
-    def __init__(self, name='800_volume', device='volume', bar='rbar', med=30, high=70):
-        self.device_mask = getattr(ossaudiodev, "SOUND_MIXER_%s" % device.upper(), "SOUND_MIXER_VOLUME")
+    def __init__(self, name='800_volume', device='Master', bar='rbar', med=30, high=70):
+        #self.device_mask = getattr(ossaudiodev, "SOUND_MIXER_%s" % device.upper(), "SOUND_MIXER_VOLUME")
+        self.device = device
         self.bar = bar
         self.name = name
         self.med = med
         self.high = high
 
     def init(self):
+        if alsaaudio is None:
+            return
+
+        #self.mixer = ossaudiodev.openmixer()
+        self.mixer = alsaaudio.Mixer(self.device)
+        self.min, self.max = self.mixer.getrange()
+
         self.widget = wmii.Widget(self.name, self.bar)
-        self.mixer = ossaudiodev.openmixer()
         wmii.register_widget(self.widget)
         self.widget.clicked = self.widget_clicked
 
@@ -24,29 +37,33 @@ class Volume():
         self.update()
 
     def update(self):
-        print "update vol"
         self._update()
         wmii.schedule(5, self.update)
 
     def _update(self):
-        self.current = self.mixer.get(self.device_mask)
-        avg = reduce(operator.add, self.current)/2
+        self.current = reduce(operator.add, self.mixer.getvolume())/2 
+        percent = math.ceil((float(self.current) / self.max) * 100)
+        #get(self.device_mask)
 
         fg = self.fglow
-        if avg > self.high:
+        if percent > self.high:
             fg = self.fghigh
-        elif avg > self.med:
+        elif percent > self.med:
             fg = self.fgmed
 
         self.widget.fg = fg
-        self.widget.show("%d%%" % self.current[0])
+        self.widget.show("%d%%" % percent)
 
     def widget_clicked(self, button):
         if button == 5:
-            newval =  map(lambda v: max(v-2, 0), self.current)
-            self.mixer.set(self.device_mask, newval)
+            newval =  max(self.current-2, self.min)
+            #self.mixer.set(self.device_mask, newval)
+            self.mixer.setvolume(newval)
+            print newval
             self._update()
         elif button == 4:
-            newval =  map(lambda v: min(v+2, 100), self.current)
-            self.mixer.set(self.device_mask, newval)
+            newval =  min(self.current+2, self.max)
+            #self.mixer.set(self.device_mask, newval)
+            self.mixer.setvolume(newval)
+            print newval
             self._update()

@@ -2,11 +2,12 @@ import pyxp
 import subprocess
 import time
 import heapq
+import fcntl
 import re
 import select
 import os
+import math
 import sys
-import plugin
 import signal
 import logging
 log = logging.getLogger('wmii')
@@ -111,7 +112,7 @@ def program_menu():
     prog = menu('cmd', _programlist)
 
     if prog:
-        execute(prog).pid
+        pid = execute(prog).pid
         log.debug("program %s started with pid %d..." % (prog, pid))
 
 def restart():
@@ -369,18 +370,16 @@ def _configure():
 
 _timers = []
 def schedule(timeout, func):
-    global _timers
-    if callable(func):
-        heapq.heappush( _timers, (timeout+time.time(), func) )
+    heapq.heappush(_timers, (timeout + time.time(), func))
 
-def process_timers():
-    global _timers
-    curtime = time.time()
-    while _timers[0][0] < curtime:
-        timeout, func = heapq.heappop(_timers)
-        func()
-
-    return _timers[0][0]
+#def process_timers():
+    #global _timers
+    #now = time.time()
+    #while _timers[0][0] < now:
+        #timeout, func = heapq.heappop(_timers)
+        #func()
+#
+    #return _timers[0][0] - now
 
 def set_theme(theme):
     colors.update(theme)
@@ -394,12 +393,17 @@ def register_plugin(plugin):
     global _plugins
     _plugins.append(plugin)
 
+def unregister_plugin(plugin):
+    global _plugins
+    _plugins.remove(plugin)
+
 def _initialize_plugins():
     global _plugins
     for p in _plugins:
         p.init()
 
-def process_event(event):
+
+def _process_event(event):
     global events
     log.debug('processing event %s' % event.split())
     edata = event.split()
@@ -417,10 +421,12 @@ def _clearbar():
         client.remove('/'.join(('/rbar', i)))
 
 def _wmiir():
-    return subprocess.Popen(('wmiir','read','/event'), stdout=subprocess.PIPE)
+    p = subprocess.Popen(('wmiir','read','/event'), stdout=subprocess.PIPE)
+    #fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK)
+    return p
 
 def mainloop():
-    global client, _running
+    global client, _running, _timers
 
     client.write ('/event', 'Start wmiirc ' + str(os.getpid()))
 
@@ -431,31 +437,31 @@ def mainloop():
     _update_keys()
 
     eventproc = _wmiir()
-    try:
-        while _running:
-            timeout = process_timers() - time.time()
-            if timeout < 0:
-                timeout = 0
+    poll = select.poll()
+    poll.register(eventproc.stdout.fileno(), select.POLLIN)
 
-            while _running:
-                s = time.time()
-                try:
-                    rdy, _, _ = select.select([eventproc.stdout], [], [], timeout)
-                except select.error:
-                    log.warning("Detected wmiir server crash, restarting...")
-                    eventproc = _wmiir()
-                    break
-                if not rdy:
-                    break
-                e = time.time()
+    timeout = 0
+    while _running:
+        p = poll.poll(timeout)
+        #print timeout
+        if p:
+            fd, event = p[0]
+            if event == select.POLLIN:
+                line = eventproc.stdout.readline()
+                _process_event(line)
+            elif event == select.POLLHUP:
+                os.kill(eventproc.pid, signal.SIGHUP)
+                eventproc = _wmiir()
 
-                line = rdy[0].readline()
-                if line:
-                    process_event(line)
+        #timeout = math.ceil(process_timers()*1000)
+        now = time.time()
+        while _timers[0][0] < now:
+            timeout, func = heapq.heappop(_timers)
+            func()
 
-                timeout -= e-s
-    finally:
-        os.kill(eventproc.pid, signal.SIGHUP)
+        timeout = math.ceil((_timers[0][0] - now) * 1000)
+
+    os.kill(eventproc.pid, signal.SIGHUP)
     log.debug("Exiting...")
 
 
