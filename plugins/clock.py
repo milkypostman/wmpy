@@ -11,6 +11,7 @@ class Clock():
         self.widget = wmii.Widget(self.name, self.bar)
         wmii.register_widget(self.widget)
         self.widget.clicked = self.widget_clicked
+        self.widget.fg = wmii.colors.get('clock_fg', wmii.colors['normfg'])
         self.update()
 
     def update(self):
