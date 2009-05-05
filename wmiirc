@@ -19,6 +19,8 @@ def main():
 
     hostname = socket.gethostname()
 
+    wmii.tagrules['Gran Paradiso'] = 'www'
+
     wmii.apps['terminal'] = 'urxvtc'
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'

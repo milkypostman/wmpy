@@ -29,8 +29,8 @@ class MPD:
         self._mpd = mpd.MPDClient()
         self._buttons = {
                 2 : self.toggle,
-                1 : self._mpd.next,
-                3 : self._mpd.previous,
+                3 : self._mpd.next,
+                1 : self._mpd.previous,
                 4 : self.fwd,
                 5 : self.rwd,
                 }
