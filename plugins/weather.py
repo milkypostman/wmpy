@@ -23,6 +23,7 @@ class Weather:
         except IOError:
             self.widget.show('N/A')
             wmii.schedule(30, self.update)
+            return
         #forecasts = []
         #for element in rss.findall('channel/item/{%s}forecast' % WEATHER_NS):
             #forecasts.append({
