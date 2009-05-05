@@ -45,7 +45,6 @@ class MPD:
         return True
 
     def update(self):
-        print 'update mpd'
         if self._mpd._sock is None and not self._connect():
             wmii.schedule(10, self.update)
             return

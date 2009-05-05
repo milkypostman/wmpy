@@ -41,8 +41,9 @@ class Volume():
         wmii.schedule(5, self.update)
 
     def _update(self):
-        self.current = reduce(operator.add, self.mixer.getvolume())/2 
-        percent = math.ceil((float(self.current) / self.max) * 100)
+        vol = self.mixer.getvolume()
+        self.current = reduce(operator.add, vol) / len(vol)
+        percent = round((float(self.current) / self.max) * 100)
         #get(self.device_mask)
 
         fg = self.fglow
@@ -56,12 +57,12 @@ class Volume():
 
     def widget_clicked(self, button):
         if button == 5:
-            newval =  max(self.current-2, self.min)
+            newval =  max(self.current-1, self.min)
             #self.mixer.set(self.device_mask, newval)
             self.mixer.setvolume(newval)
             self._update()
         elif button == 4:
-            newval =  min(self.current+2, self.max)
+            newval =  min(self.current+1, self.max)
             #self.mixer.set(self.device_mask, newval)
             self.mixer.setvolume(newval)
             self._update()
