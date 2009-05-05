@@ -59,11 +59,9 @@ class Volume():
             newval =  max(self.current-2, self.min)
             #self.mixer.set(self.device_mask, newval)
             self.mixer.setvolume(newval)
-            print newval
             self._update()
         elif button == 4:
             newval =  min(self.current+2, self.max)
             #self.mixer.set(self.device_mask, newval)
             self.mixer.setvolume(newval)
-            print newval
             self._update()
