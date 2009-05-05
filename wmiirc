@@ -25,9 +25,9 @@ def main():
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'
 
-    wmii.set_theme(themes.default)
+    wmii.set_theme(themes.green)
     if hostname in ['hannibal', 'baracus']:
-        wmii.set_theme(themes.green)
+        wmii.set_theme(themes.klav)
 
     if hostname in ['murdock']:
         volume = plugins.Volume(name='805_volume', device="LineOut")
@@ -46,6 +46,7 @@ def main():
     wmii.register_plugin(clock)
 
     if hostname in ['baracus']:
+        wmii.config['font'] =  '-artwiz-snap-*-*-*-*-*-*-*-*-*-*-*-*'
         mpd = plugins.MPD()
         wmii.register_plugin(mpd)
 

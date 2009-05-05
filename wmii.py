@@ -261,16 +261,16 @@ def event_key(key):
 def event_focustag(tag):
     global _tagidx
     idx = _tagidx[tag]
-    client.write(''.join(['/lbar/', str(idx), '_', tag]), ' '.join((
-    (config['focuscolors'], tag)
-    )))
+    client.write(''.join(['/lbar/', str(idx), '_', tag]), ' '.join(
+        (colors['focuscolors'], tag)
+    ))
 
 def event_unfocustag(tag):
     global _tagidx
     idx = _tagidx[tag]
-    client.write(''.join(['/lbar/', str(idx), '_', tag]), ' '.join((
-    (config['normcolors'], tag)
-    )))
+    client.write(''.join(['/lbar/', str(idx), '_', tag]), ' '.join(
+        (colors['normcolors'], tag)
+    ))
 
 def event_createtag(tag):
     global _tagname, _tagidx, _tagidxname
@@ -339,9 +339,9 @@ def _initialize_tags():
         _tagidx[tag] = idx
         _tagname[idx] = tag
         if tag == focusedtag:
-            color = get_ctl('focuscolors')
+            color = colors['focuscolors']
         else:
-            color = get_ctl('normcolors')
+            color = colors['normcolors']
 
         client.create(''.join(['/lbar/', str(idx), '_', tag]), ' '.join((color, tag)))
 
@@ -349,10 +349,18 @@ def _initialize_tags():
 
 def _configure():
     global client
-    if 'normcolors' not in config:
-        config['normcolors'] = ' '.join((colors['normfg'], colors['normbg'], colors['normborder']))
-    if 'focuscolors' not in config:
-        config['focuscolors'] = ' '.join((colors['focusfg'], colors['focusbg'], colors['focusborder']))
+    colors['normcolors'] = ' '.join((colors['normfg'], colors['normbg'], colors['normborder']))
+    colors['focuscolors'] = ' '.join((colors['focusfg'], colors['focusbg'], colors['focusborder']))
+
+    if 'normwin' in colors:
+        config['normcolors'] = colors['normwin']
+    else:
+        config['normcolors'] = colors['normcolors']
+
+    if 'focuswin' in colors:
+        config['focuscolors'] = colors['focuswin']
+    else:
+        config['focuscolors'] = colors['focuscolors']
 
     set_ctl(config)
 
