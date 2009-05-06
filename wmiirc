@@ -25,27 +25,16 @@ def main():
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'
 
-    wmii.set_theme(themes.green)
-    if hostname in ['hannibal', 'baracus']:
-        wmii.set_theme(themes.klav)
+    wmii.set_theme(themes.klav)
 
-    if hostname in ['murdock']:
+    if hostname.startswith('murdock'):
         volume = plugins.Volume(name='805_volume', device="LineOut")
         wmii.register_plugin(volume)
 
         battery = plugins.Battery()
         wmii.register_plugin(battery)
-    else:
-        volume = plugins.Volume(name='805_volume_1')
-        wmii.register_plugin(volume)
 
-        volume = plugins.Volume(name='805_volume_2', device="PCM")
-        wmii.register_plugin(volume)
-
-    clock = plugins.Clock()
-    wmii.register_plugin(clock)
-
-    if hostname in ['baracus']:
+    if hostname.startswith('baracus'):
         wmii.config['font'] =  '-artwiz-snap-*-*-*-*-*-*-*-*-*-*-*-*'
         mpd = plugins.MPD()
         wmii.register_plugin(mpd)
@@ -55,6 +44,15 @@ def main():
 
         cpu = plugins.CPU(name='750_cpu1', cpu=1)
         wmii.register_plugin(cpu)
+
+        volume = plugins.Volume(name='805_volume_1')
+        wmii.register_plugin(volume)
+
+        volume = plugins.Volume(name='805_volume_2', device="PCM")
+        wmii.register_plugin(volume)
+
+    clock = plugins.Clock()
+    wmii.register_plugin(clock)
 
     weather = plugins.Weather()
     wmii.register_plugin(weather)

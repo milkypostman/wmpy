@@ -1,0 +1,30 @@
+Python configuration for wmii window manager
+
+Optional Dependencies:
+
+	pyalsaaudio
+
+
+Install:
+
+	mv ~/.wmii-hg ~/.origwmii-hg
+	git clone git://github.com/decurtis/wmpy.git ~/.wmii-hg
+	cd ~/.wmii-hg
+	python setup.py build
+
+
+Running:
+
+	~/.wmii-hg/wmiirc
+
+
+Configuration:
+
+	Edit the 'wmiirc' file to make changes to your personal configuration.
+
+	All variables in the /ctl are stored in the 'config' variable in the
+	wmii module.  Color configurations are stored in the 'themes.py'
+	file and can also be configured manually by accessing the 'colors'
+	variable.
+
+
