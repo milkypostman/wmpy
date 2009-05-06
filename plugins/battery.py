@@ -47,7 +47,17 @@ class Battery:
         hoursleft = int(timeleft)
         minutesleft = (timeleft - hoursleft) * 60
 
+        if remaining < self.warn:
+            self.widget.fg = '#000000'
+            self.widget.bg = '#e7e700'
+        elif remaining < self.low:
+            self.widget.fg = '#000000'
+            self.widget.bg = '#d70000'
+        else:
+            self.widget.fg = wmii.colors['normfg']
+            self.widget.bg = wmii.colors['normbg']
+
         symbol = self.symbols[state]
-        self.widget.show("%2d:%2d %s%2d%s" % (hoursleft, minutesleft, symbol, float(remaining)/self.capacity * 100, symbol) )
+        self.widget.show("%2d:%02d %s%2d%s" % (hoursleft, minutesleft, symbol, float(remaining)/self.capacity * 100, symbol) )
 
         wmii.schedule(60, self.update)

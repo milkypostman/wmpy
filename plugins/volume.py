@@ -11,12 +11,13 @@ import ossaudiodev
 import operator
 
 class Volume:
-    def __init__(self, name='800_volume', device='Master', bar='rbar', med=30, high=70, driver='alsa'):
+    def __init__(self, name='800_volume', device='Master', bar='rbar', med=30, high=70, step=1, driver='alsa'):
         self.device = device
         self.bar = bar
         self.name = name
         self.med = med
         self.high = high
+        self.step = step
         if driver == 'alsa' and alsaaudio is None :
             driver = 'oss'
 
@@ -38,19 +39,22 @@ class Volume:
         self.update()
 
     def _init_oss(self):
-        self.device_mask = getattr(ossaudiodev, "SOUND_MIXER_%s" % device.upper(), "SOUND_MIXER_VOLUME")
+        self.device_mask = getattr(ossaudiodev, "SOUND_MIXER_%s" % self.device.upper(), None)
+        if self.device_mask is None:
+            self.device_mask = getattr(ossaudiodev, "SOUND_MIXER_VOLUME")
+
         self.mixer = ossaudiodev.openmixer()
 
     def _init_alsa(self):
         self.mixer = alsaaudio.Mixer(self.device)
         self.min, self.max = self.mixer.getrange()
 
-    def _current_alsa(self):
+    def _update_alsa(self):
         vol = self.mixer.getvolume()
         self.current = reduce(operator.add, vol) / len(vol)
         return round((float(self.current) / self.max) * 100)
 
-    def _current_oss(self):
+    def _update_oss(self):
         vol = self.mixer.get(self.device_mask)
         self.current = reduce(operator.add, vol) / len(vol)
         return round((float(self.current) / self.max) * 100)
@@ -60,7 +64,7 @@ class Volume:
         wmii.schedule(5, self.update)
 
     def _update(self):
-        getattr(self, '_current_' + self.driver)()
+        percent = getattr(self, '_update_' + self.driver)()
         fg = self.fglow
         if percent > self.high:
             fg = self.fghigh
@@ -71,18 +75,17 @@ class Volume:
         self.widget.show("%d%%" % percent)
 
     def _set_alsa(self, value):
-        self.mixer.setvolume(newval)
+        self.mixer.setvolume(value)
 
     def _set_oss(self, value):
-        self.mixer.set(self.device_mask, newval)
+        self.mixer.set(self.device_mask, (value,value))
 
     def widget_clicked(self, button):
         if button == 5:
-            newval =  max(self.current-1, self.min)
+            newval =  max(self.current-self.step, self.min)
             getattr(self, "_set_" + self.driver)(newval)
             self._update()
         elif button == 4:
-            newval =  min(self.current+1, self.max)
-            #self.mixer.set(self.device_mask, newval)
-            self.mixer.setvolume(newval)
+            newval =  min(self.current+self.step, self.max)
+            getattr(self, "_set_" + self.driver)(newval)
             self._update()

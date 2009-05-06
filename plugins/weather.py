@@ -1,5 +1,8 @@
 import wmii
 import urllib
+import threading
+
+import thread
 try:
     import xml.etree.ElementTree as ElementTree
 except ImportError:
@@ -13,11 +16,13 @@ class Weather:
         self.name = name
         self.zipcode = zipcode
         self.bar = bar
+        self.available = False
 
     def init(self):
         self.widget = wmii.Widget(self.name, self.bar)
         wmii.register_widget(self.widget)
-        self.update()
+        self.thread = threading.Thread(target=self.update)
+        self.thread.start()
 
     def update(self):
         url = WEATHER_URL % self.zipcode
@@ -25,7 +30,7 @@ class Weather:
             rss = ElementTree.parse(urllib.urlopen(url)).getroot()
         except IOError:
             self.widget.show('N/A')
-            wmii.schedule(30, self.update)
+            wmii.schedule(30, self._retrieve)
             return
         #forecasts = []
         #for element in rss.findall('channel/item/{%s}forecast' % WEATHER_NS):
@@ -36,7 +41,8 @@ class Weather:
                 #'condition': element.get('text')
             #})
         #print url
-        temp = rss.find('channel/item/{%s}condition' % WEATHER_NS).get('temp')
-        units = rss.find('channel/{%s}units' % WEATHER_NS).get('temperature')
-        self.widget.show(temp+units)
+        self.temp = rss.find('channel/item/{%s}condition' % WEATHER_NS).get('temp')
+        self.units = rss.find('channel/{%s}units' % WEATHER_NS).get('temperature')
+
+        self.widget.show(self.temp+self.units)
         wmii.schedule(60, self.update)

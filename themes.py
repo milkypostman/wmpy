@@ -19,15 +19,13 @@ green = {
         'focusbg' : '#007700',
         'focusborder' : '#88ff88',
 
-        'volume_fglow' : '#cccccc',
-        'volume_fgmed' : '#00cc00',
-        'volume_fghigh' : '#cc0000',
-
         'mpd_fg' : '#FFFFaa',
         }
 
 
-klav = {
+klav = default
+
+klav.update({
         'normfg' : '#afd700',
         'normbg' : '#000000',
         'normborder' : '#000000',
@@ -36,6 +34,6 @@ klav = {
         'focusborder' : '#000000',
         'mpd_fg' : '#009ed7',
         'clock_fg' : '#ffffff', 
-        }
+        })
 klav['focuswin'] = ' '.join( (klav['focusfg'], klav['focusbg'], '#e2baf1') )
 
