@@ -25,3 +25,17 @@ green = {
 
         'mpd_fg' : '#FFFFaa',
         }
+
+
+klav = {
+        'normfg' : '#afd700',
+        'normbg' : '#000000',
+        'normborder' : '#000000',
+        'focusfg' : '#e2baf1',
+        'focusbg' : '#000000',
+        'focusborder' : '#000000',
+        'mpd_fg' : '#009ed7',
+        'clock_fg' : '#ffffff', 
+        }
+klav['focuswin'] = ' '.join( (klav['focusfg'], klav['focusbg'], '#e2baf1') )
+

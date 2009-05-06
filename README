@@ -1,0 +1,40 @@
+Python configuration for wmii window manager
+
+Optional Dependencies:
+
+	pyalsaaudio
+
+
+Install:
+
+	mv ~/.wmii-hg ~/.origwmii-hg
+	git clone git://github.com/decurtis/wmpy.git ~/.wmii-hg
+	cd ~/.wmii-hg
+	python setup.py build
+
+
+Running:
+
+	~/.wmii-hg/wmiirc
+
+
+Configuration:
+
+	Edit the 'wmiirc' file to make changes to your personal configuration.
+
+	All variables in the /ctl are stored in the 'config' variable in the
+	wmii module.  Color configurations are stored in the 'themes.py'
+	file and can also be configured manually by accessing the 'colors'
+	variable.
+
+
+Notes:
+
+	One thing this configuration system does differently is ordering of
+	tags and adding new tags.  New tags get added in the order they are
+	received but tagging is still dynamic, meaning you can define the
+	order of all the tags you'll ever want, and they will not show up
+	until they have a client in them, but you can still move to them
+	like you normally would (Mod4-#) even though they are empty.  In the
+	case you want to add a tag in the middle of running, it will find an
+	open slot (1-9) and be placed there.
