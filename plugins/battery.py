@@ -2,7 +2,7 @@ import wmii
 import time
 import re
 
-class Battery():
+class Battery:
     def __init__(self, name='700_battery', battery="BAT0", bar='rbar'):
         self.battery = battery
         self.bar = bar
