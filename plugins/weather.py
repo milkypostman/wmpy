@@ -1,6 +1,9 @@
 import wmii
 import urllib
-import xml.etree.ElementTree as ElementTree
+try:
+    import xml.etree.ElementTree as ElementTree
+except ImportError:
+    import elementtree.ElementTree as ElementTree
 
 WEATHER_URL = 'http://xml.weather.yahoo.com/forecastrss?p=%s'
 WEATHER_NS = 'http://xml.weather.yahoo.com/ns/rss/1.0'

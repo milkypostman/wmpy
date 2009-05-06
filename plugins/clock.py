@@ -1,7 +1,7 @@
 import wmii
 import time
 
-class Clock():
+class Clock:
     def __init__(self, name='999_clock', bar='rbar', format='%Y-%m-%d %H:%M:%S'):
         self.bar = bar
         self.format = format

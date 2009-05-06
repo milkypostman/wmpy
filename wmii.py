@@ -477,7 +477,7 @@ def mainloop():
 if __name__ == '__main__':
     mainloop()
 
-class Widget():
+class Widget:
     def __init__(self, name, bar='rbar'):
         self.name = name
         self.visible = False
