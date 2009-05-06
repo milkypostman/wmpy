@@ -56,10 +56,9 @@ colrules = {
 # default tagrules
 tagrules = {
     'Firefox.*': 'www',
-    'Gimp.*': 'gimp',
+    'Gimp.*': 'gimp+~',
     'MPlayer.*': '~',
 }
-
 
 _tagidxheap = []
 _tagidx = {}
@@ -292,6 +291,8 @@ def event_destroytag(tag):
     idx = _tagidx[tag]
     del _tagname[idx]
     del _tagidx[tag]
+
+    _releasetagidx(idx)
 
     _tagidxname = sorted(_tagname.iteritems())
     client.remove(''.join(['/lbar/', str(idx), '_', tag]))
