@@ -43,8 +43,11 @@ class Battery():
         state = data['charging state']
         rate = int(data['present rate'].split()[0])
         remaining = int(data['remaining capacity'].split()[0])
+        timeleft = remaining / float(rate)
+        hoursleft = int(timeleft)
+        minutesleft = (timeleft - hoursleft) * 60
 
         symbol = self.symbols[state]
-        self.widget.show("%s%2d%s" % (symbol, float(remaining)/self.capacity * 100, symbol) )
+        self.widget.show("%2d:%2d %s%2d%s" % (hoursleft, minutesleft, symbol, float(remaining)/self.capacity * 100, symbol) )
 
         wmii.schedule(60, self.update)
