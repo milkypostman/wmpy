@@ -451,7 +451,7 @@ def mainloop():
 
     timeout = 0
     while _running:
-        p = poll.poll(timeout)
+        p = poll.poll(timeout*1000)
         #print timeout
         if p:
             fd, event = p[0]
@@ -468,7 +468,7 @@ def mainloop():
             timeout, func = heapq.heappop(_timers)
             func()
 
-        timeout = math.ceil((_timers[0][0] - now) * 1000)
+        timeout = max(_timers[0][0] - now, 1)
 
     os.kill(eventproc.pid, signal.SIGHUP)
     log.debug("Exiting...")

@@ -50,6 +50,12 @@ def main():
         mpd = plugins.MPD()
         wmii.register_plugin(mpd)
 
+        cpu = plugins.CPU(name='750_cpu0', cpu=0)
+        wmii.register_plugin(cpu)
+
+        cpu = plugins.CPU(name='750_cpu1', cpu=1)
+        wmii.register_plugin(cpu)
+
     weather = plugins.Weather()
     wmii.register_plugin(weather)
 
