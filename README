@@ -28,3 +28,13 @@ Configuration:
 	variable.
 
 
+Notes:
+
+	One thing this configuration system does differently is ordering of
+	tags and adding new tags.  New tags get added in the order they are
+	received but tagging is still dynamic, meaning you can define the
+	order of all the tags you'll ever want, and they will not show up
+	until they have a client in them, but you can still move to them
+	like you normally would (Mod4-#) even though they are empty.  In the
+	case you want to add a tag in the middle of running, it will find an
+	open slot (1-9) and be placed there.
