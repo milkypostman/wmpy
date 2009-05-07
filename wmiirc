@@ -21,11 +21,14 @@ def main():
 
     wmii.tagrules['Gran Paradiso'] = 'www'
 
+    wmii.set_theme(themes.klav)
+
     wmii.apps['terminal'] = 'urxvtc'
     if hostname.find('divms') > -1:
         wmii.apps['terminal'] = 'gnome-terminal'
 
-    wmii.set_theme(themes.klav)
+        volume = plugins.Volume(name='805_volume_1', driver='oss', device="VOLUME" )
+        wmii.register_plugin(volume)
 
     if hostname.startswith('murdock'):
         volume = plugins.Volume(name='805_volume', device="LineOut", step=2)
@@ -39,17 +42,19 @@ def main():
         mpd = plugins.MPD()
         wmii.register_plugin(mpd)
 
-        cpu = plugins.CPU(name='750_cpu0', cpu=0)
-        wmii.register_plugin(cpu)
-
-        cpu = plugins.CPU(name='750_cpu1', cpu=1)
-        wmii.register_plugin(cpu)
-
         volume = plugins.Volume(name='805_volume_1')
         wmii.register_plugin(volume)
 
         volume = plugins.Volume(name='805_volume_2', device="PCM")
         wmii.register_plugin(volume)
+
+
+    cpu = plugins.CPU(name='750_cpu0', cpu=0)
+    wmii.register_plugin(cpu)
+
+    cpu = plugins.CPU(name='750_cpu1', cpu=1)
+    wmii.register_plugin(cpu)
+
 
     clock = plugins.Clock()
     wmii.register_plugin(clock)

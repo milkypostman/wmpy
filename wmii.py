@@ -379,7 +379,7 @@ def _configure():
 
 _timers = []
 def schedule(timeout, func):
-    heapq.heappush(_timers, (timeout + time.time(), func))
+    heapq.heappush(_timers, (timeout + int(time.time()), func))
 
 #def process_timers():
     #global _timers
@@ -451,8 +451,8 @@ def mainloop():
 
     timeout = 0
     while _running:
-        p = poll.poll(timeout*1000)
         #print timeout
+        p = poll.poll(timeout*1000)
         if p:
             fd, event = p[0]
             if event == select.POLLIN:
@@ -464,11 +464,12 @@ def mainloop():
 
         #timeout = math.ceil(process_timers()*1000)
         now = time.time()
-        while _timers[0][0] < now:
+        while _timers[0][0] <= now:
             timeout, func = heapq.heappop(_timers)
             func()
 
-        timeout = max(_timers[0][0] - now, 1)
+        timeout = max(_timers[0][0] - time.time(), 1)
+
 
     os.kill(eventproc.pid, signal.SIGHUP)
     log.debug("Exiting...")

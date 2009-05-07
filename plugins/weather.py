@@ -1,8 +1,11 @@
 import wmii
 import urllib
 import threading
-
+import time
 import thread
+import logging
+log = logging.getLogger('wmii.weather')
+
 try:
     import xml.etree.ElementTree as ElementTree
 except ImportError:
@@ -21,28 +24,34 @@ class Weather:
     def init(self):
         self.widget = wmii.Widget(self.name, self.bar)
         wmii.register_widget(self.widget)
-        self.thread = threading.Thread(target=self.update)
-        self.thread.start()
+        #self.thread = threading.Thread(target=self.update)
+        #self.thread.daemon = True
+        #self.thread.start()
+        thread.start_new_thread(self.update, ())
 
     def update(self):
-        url = WEATHER_URL % self.zipcode
-        try:
-            rss = ElementTree.parse(urllib.urlopen(url)).getroot()
-        except IOError:
-            self.widget.show('N/A')
-            wmii.schedule(30, self._retrieve)
-            return
-        #forecasts = []
-        #for element in rss.findall('channel/item/{%s}forecast' % WEATHER_NS):
-            #forecasts.append({
-                #'date': element.get('date'),
-                #'low': element.get('low'),
-                #'high': element.get('high'),
-                #'condition': element.get('text')
-            #})
-        #print url
-        self.temp = rss.find('channel/item/{%s}condition' % WEATHER_NS).get('temp')
-        self.units = rss.find('channel/{%s}units' % WEATHER_NS).get('temperature')
+        while True:
+            log.debug("updating...")
+            url = WEATHER_URL % self.zipcode
+            try:
+                log.debug("retrieving url...")
+                rss = ElementTree.parse(urllib.urlopen(url)).getroot()
+            except IOError:
+                log.debug("IOError when retrieving url, retrying in 30 seconds.")
+                self.widget.show('N/A')
+                time.sleep(30)
+                continue
+            #forecasts = []
+            #for element in rss.findall('channel/item/{%s}forecast' % WEATHER_NS):
+                #forecasts.append({
+                    #'date': element.get('date'),
+                    #'low': element.get('low'),
+                    #'high': element.get('high'),
+                    #'condition': element.get('text')
+                #})
+            #print url
+            self.temp = rss.find('channel/item/{%s}condition' % WEATHER_NS).get('temp')
+            self.units = rss.find('channel/{%s}units' % WEATHER_NS).get('temperature')
 
-        self.widget.show(self.temp+self.units)
-        wmii.schedule(60, self.update)
+            self.widget.show(self.temp+self.units)
+            time.sleep(60)

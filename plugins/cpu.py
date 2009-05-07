@@ -5,7 +5,7 @@ from operator import add
 from itertools import imap
 import math
 
-class CPU():
+class CPU:
     _initialized = False
     _widgets = {}
 
