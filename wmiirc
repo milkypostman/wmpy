@@ -24,8 +24,9 @@ def main():
     wmii.set_theme(themes.klav)
 
     wmii.apps['terminal'] = 'urxvtc'
-    if hostname.find('divms') > -1:
-        wmii.apps['terminal'] = 'gnome-terminal'
+    if hostname.find('uiowa') > -1:
+        #wmii.apps['terminal'] = 'gnome-terminal'
+        wmii.apps['terminal'] = 'xterm'
 
         volume = plugins.Volume(name='805_volume_1', driver='oss', device="VOLUME" )
         wmii.register_plugin(volume)

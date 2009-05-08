@@ -15,11 +15,13 @@ WEATHER_URL = 'http://xml.weather.yahoo.com/forecastrss?p=%s'
 WEATHER_NS = 'http://xml.weather.yahoo.com/ns/rss/1.0'
 
 class Weather:
-    def __init__(self, name='600_weather', zipcode=52245, bar='rbar'):
+    def __init__(self, name='600_weather', zipcode=52245, bar='rbar', format="%(temp)d%(units)s"):
         self.name = name
         self.zipcode = zipcode
         self.bar = bar
         self.available = False
+        self.format = format
+        self.data = {}
 
     def init(self):
         self.widget = wmii.Widget(self.name, self.bar)
@@ -50,8 +52,14 @@ class Weather:
                     #'condition': element.get('text')
                 #})
             #print url
-            self.temp = rss.find('channel/item/{%s}condition' % WEATHER_NS).get('temp')
-            self.units = rss.find('channel/{%s}units' % WEATHER_NS).get('temperature')
+            self.data['temp'] = int(rss.find('channel/item/{%s}condition' % WEATHER_NS).get('temp'))
+            self.data['units'] = rss.find('channel/{%s}units' % WEATHER_NS).get('temperature')
 
-            self.widget.show(self.temp+self.units)
+            if self.data['temp'] >= 60:
+                self.widget.fg = wmii.colors.get('weather_hotfg', '#c51102')
+            else:
+                self.widget.fg = wmii.colors.get('weather_coldfg', '#3a4ebe')
+
+
+            self.widget.show(self.format % self.data)
             time.sleep(60)

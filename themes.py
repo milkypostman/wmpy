@@ -20,6 +20,8 @@ green = {
         'focusborder' : '#88ff88',
 
         'mpd_fg' : '#FFFFaa',
+        'weather_hotfg' : '#c51102',
+        'weather_coldfg' : '#3a4ebe',
         }
 
 
