@@ -81,7 +81,7 @@ static PyMethodDef Wmii_methods[] = {
         Wmii_new,                  /* tp_new */
     };
 
-    PyMODINIT_FUNC
+PyMODINIT_FUNC
 initpyxp(void)
 {
     PyObject *m;
@@ -98,7 +98,7 @@ initpyxp(void)
     PyModule_AddObject(m, "Wmii", (PyObject *)&WmiiType);
 }
 
-    static PyObject *
+static PyObject *
 Wmii_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     Wmii *self;
@@ -111,6 +111,7 @@ Wmii_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     else
     {
         printf("Error creating object!\n");
+        return NULL;
     }
     //printf("self->client: %d\n", self->client);
 
@@ -132,7 +133,7 @@ Wmii_create(Wmii *self, PyObject *args)
     fid = ixp_create(self->client, file, 0777, P9_OWRITE);
     if(fid == NULL)
     {
-        PyErr_SetObject(PyExc_IOError, PyString_FromFormat("Can't create file '%s'\n", file));
+        PyErr_Format(PyExc_IOError, "Can't create file '%s'\n", file);
     }
 
     if((fid->qid.type&P9_DMDIR) == 0)
@@ -157,7 +158,7 @@ Wmii_remove(Wmii *self, PyObject *args)
 
     if (!ixp_remove(self->client, file))
     {
-        PyErr_SetObject(PyExc_IOError, PyString_FromFormat("Can't remove file '%s'\n", file));
+        PyErr_Format(PyExc_IOError, "Can't remove file '%s'\n", file);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -179,7 +180,7 @@ Wmii_write(Wmii *self, PyObject *args)
     fid = ixp_open(self->client, file, P9_OWRITE);
     if(fid == NULL)
     {
-        PyErr_SetObject(PyExc_IOError, PyString_FromFormat("Can't open file '%s'\n", file));
+        PyErr_Format(PyExc_IOError, "Can't open file '%s'\n", file);
         return NULL;
     }
 
@@ -235,7 +236,6 @@ Wmii_read(Wmii *self, PyObject *args)
     free(readbuf);
 
     return outstr;
-
 }
 
 static PyObject *
@@ -246,6 +246,7 @@ Wmii_ls(Wmii *self, PyObject *args)
     PyArg_ParseTuple(args, "s", &file);
     int count;
     PyObject *list;
+    PyObject *str;
 
     IxpCFid *fid;
     IxpStat stat;
@@ -263,7 +264,10 @@ Wmii_ls(Wmii *self, PyObject *args)
         while(msg.pos < msg.end)
         {
             ixp_pstat(&msg, &stat);
-            PyList_Append(list, PyString_FromString(stat.name));
+            str = PyString_FromString(stat.name);
+            PyList_Append(list, str);
+            Py_DECREF(str);
+            ixp_freestat(&stat);
         }
     }
 
@@ -291,7 +295,6 @@ Wmii_init(Wmii *self, PyObject *args, PyObject *kwds)
         self->address = address;
 
         adr = PyString_AsString(address);
-
 
         //printf("** Wmii([%s]) **\n", adr);
         self->client = ixp_mount(adr);

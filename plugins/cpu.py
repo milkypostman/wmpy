@@ -54,12 +54,12 @@ class CPU:
                 try:
                     difftotal = total - cls.data[i]['total']
                     diffactive = active - cls.data[i]['active']
+                    cls.data[i]['usage'] = math.floor((float(diffactive) / difftotal) * 100)
                 except KeyError:
-                    difftotal = total
-                    diffactive = active
                     cls.data[i] = {}
+                except ZeroDivisionError:
+                    cls.data[i]['usage'] = 0
 
-                cls.data[i]['usage'] = math.floor((float(diffactive) / difftotal) * 100)
                 cls.data[i]['total'] = total
                 cls.data[i]['active'] = active
 

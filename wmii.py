@@ -10,6 +10,10 @@ import math
 import sys
 import signal
 import logging
+import string
+from itertools import chain
+from operator import itemgetter
+
 log = logging.getLogger('wmii')
 
 HOME=os.path.join(os.getenv('HOME'), '.wmii-hg')
@@ -26,6 +30,7 @@ apps = {
 # pre-allocated tags
 tags = { 'main' : 1,
         'www' : 2,
+        'extra' : 3,
         }
 
 # initialize default colors
@@ -65,6 +70,7 @@ _tagidx = {}
 _tagname = {}
 _tagname_reserved = {}
 _tagidxname = ()
+_tagidxname_reserved = ()
 
 _running = True
 
@@ -81,14 +87,48 @@ def set_ctl(name, value = None):
     else:
         client.write('/ctl',' '.join((name,value)))
 
+def set_client_tag_startswith(char):
+    global client, _tagname_reserved, _tagname, _tagidxname_reserved
+    currentname = get_ctl('view')
+    currentidx = -1
+    possible = []
+    for idx,name in chain(
+            _tagidxname_reserved,
+            (idxname for idxname in _tagidxname if idxname[1] not in tags)
+            ):
+        if name[0] == char:
+            if name == currentname:
+                currentidx = len(possible)
+            possible.append(name)
+
+    client.write('/client/sel/tags', possible[(currentidx+1) % len(possible)])
+
+def set_tag_startswith(char):
+    """ Set to next tag that starts with 'char'.  Includes reserved tags. """
+    global _tagname_reserved, _tagname, _tagidxname_reserved
+    currentname = get_ctl('view')
+    currentidx = -1
+    possible = []
+    for idx,name in chain(
+            _tagidxname_reserved,
+            (idxname for idxname in _tagidxname if idxname[1] not in tags)
+            ):
+        if name[0] == char:
+            if name == currentname:
+                currentidx = len(possible)
+            possible.append(name)
+
+    set_ctl('view', possible[(currentidx+1) % len(possible)])
+
 def set_tag_idx(idx):
+    global _tagname_reserved, _tagname
     if idx in _tagname_reserved:
         set_ctl('view', _tagname_reserved[idx])
     elif idx in _tagname:
         set_ctl('view', _tagname[idx])
 
 def set_client_tag_idx(idx):
-    global client
+    global client, _tagname_reserved, _tagname
     if idx in _tagname_reserved:
         client.write('/client/sel/tags', _tagname_reserved[idx])
     elif idx in _tagname:
@@ -103,7 +143,7 @@ def update_programlist():
     for prog in proc.stdout:
         _programlist.append(prog.strip())
 
-def program_menu():
+def program_menu(*args):
     global _programlist
     if _programlist is None:
         update_programlist()
@@ -129,7 +169,7 @@ actions = {
     'quit':quit,
 }
 
-def action_menu():
+def action_menu(*args):
     action = menu('action', actions.keys())
     if action in actions and callable(actions[action]):
         actions[action]()
@@ -169,8 +209,13 @@ def execute(cmd, shell=True):
 
     return subprocess.Popen(cmd, shell=shell, preexec_fn=setsid)
 
+def tag_menu(*args):
+    t = menu('tag', (tag for idx,tag in _tagidxname))
+    if t:
+        set_ctl('view', t)
+
 keybindings = {
-        'Mod1-p':lambda _: program_menu(),
+        'Mod1-p':program_menu,
         'Mod1-j':lambda _: client.write('/tag/sel/ctl', 'select down'),
         'Mod1-k':lambda _: client.write('/tag/sel/ctl', 'select up'),
         'Mod1-h':lambda _: client.write('/tag/sel/ctl', 'select left'),
@@ -182,13 +227,16 @@ keybindings = {
         'Mod1-d':lambda _: client.write('/tag/sel/ctl', 'colmode sel default-max'),
         'Mod1-s':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack-max'),
         'Mod1-m':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack+max'),
+        'Mod1-t':tag_menu,
         'Mod1-comma':lambda _: setviewofs(-1),
         'Mod1-period':lambda _: setviewofs(1),
-        'Mod4-#':lambda key: set_tag_idx(int(key[key.rfind('-')+1:])),
-        'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1:])),
+        'Mod4-@':lambda key: set_tag_startswith(key[key.rfind('-')+1]),
+        'Mod4-Shift-@':lambda key: set_client_tag_startswith(key[key.rfind('-')+1]),
+        'Mod4-#':lambda key: set_tag_idx(int(key[key.rfind('-')+1])),
+        'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1])),
         'Mod1-Shift-c':lambda _: client.write('/client/sel/ctl', 'kill'),
         'Mod1-Return':lambda _: execute(apps['terminal']),
-        'Mod1-a':lambda _: action_menu(),
+        'Mod1-a':action_menu,
         'Mod1-space':lambda _: client.write('/tag/sel/ctl', 'select toggle'),
         'Mod1-Shift-space':lambda _: client.write('/tag/sel/ctl', 'send sel toggle'),
         }
@@ -197,6 +245,7 @@ def _update_keys():
     global keybindings
     global client
     numre = re.compile('(.*-)#')
+    charre = re.compile('(.*-)@')
 
     keys = []
     for key in keybindings:
@@ -204,6 +253,13 @@ def _update_keys():
         if match:
             pfx = match.group(1)
             keys.extend([pfx+str(i) for i in range(10)])
+            continue
+
+        match = charre.match(key)
+        if match:
+            pfx = match.group(1)
+            keys.extend([pfx+i for i in 'abcdefghijklmnopqrstuvwxyz'])
+            continue
 
         keys.append(key)
 
@@ -227,7 +283,8 @@ def _obtaintagidx():
 
 def _releasetagidx(idx):
     global _tagidxheap
-    heapq.heappush(_tagidxheap, idx)
+    if idx not in _tagname_reserved:
+        heapq.heappush(_tagidxheap, idx)
 
 def event_leftbarclick(button, id):
     global _tagname
@@ -251,11 +308,19 @@ def event_key(key):
     func = keybindings.get(key, None)
     if callable(func):
         func(key)
-    else:
-        numkey = re.sub('-\d*$', '-#', key)
-        func = keybindings.get(numkey, None)
-        if callable(func):
-            func(key)
+        return
+
+    numkey = re.sub('-\d*$', '-#', key)
+    func = keybindings.get(numkey, None)
+    if callable(func):
+        func(key)
+        return
+
+    charkey = re.sub('-[a-zA-Z]$', '-@', key)
+    func = keybindings.get(charkey, None)
+    if callable(func):
+        func(key)
+        return
 
 def event_focustag(tag):
     global _tagidx
@@ -320,13 +385,14 @@ events = {
         }
 
 def _initialize_tags():
-    global _tagidx, _tagname, _tagidxname, _tagidxheap, _tagname_reserved
+    global _tagidx, _tagname, _tagidxname, _tagidxheap, _tagname_reserved, _tagidxname_reserved 
     global client
 
     focusedtag = get_ctl('view')
 
     for tag, idx in tags.iteritems():
         _tagname_reserved[idx] = tag
+    _tagidxname_reserved = sorted(_tagname_reserved.iteritems())
 
     _tagidxheap = [i for i in range(1,10) if i not in _tagname_reserved]
     heapq.heapify(_tagidxheap)
