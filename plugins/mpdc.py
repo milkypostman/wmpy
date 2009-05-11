@@ -1,5 +1,6 @@
 import wmii
 import socket
+from collections import defaultdict
 
 try:
     import mpd
@@ -14,6 +15,7 @@ class MPD:
         self.hostname = hostname
         self.port = port
         self._mpd = None
+        self.data = defaultdict(str)
 
     def init(self):
         if mpd is None:
@@ -24,7 +26,6 @@ class MPD:
         wmii.register_widget(self.widget)
         self.widget.clicked = self.widget_clicked
         self.widget.fg = wmii.colors.get('mpd_fg', wmii.colors['normfg'])
-
 
         self._mpd = mpd.MPDClient()
         self._buttons = {
@@ -57,7 +58,9 @@ class MPD:
         try:
             state = self._mpd.status()['state']
             if state == 'play':
-                text = self.format % self._mpd.currentsong()
+                self.data.clear()
+                self.data.update(self._mpd.currentsong())
+                text = self.format % self.data
             else:
                 text = state
             self.widget.show(text)

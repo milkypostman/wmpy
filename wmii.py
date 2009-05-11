@@ -148,11 +148,7 @@ def program_menu(*args):
     if _programlist is None:
         update_programlist()
 
-    prog = menu('cmd', _programlist)
-
-    if prog:
-        pid = execute(prog).pid
-        log.debug("program %s started with pid %d..." % (prog, pid))
+    return menu('cmd', _programlist)
 
 def restart():
     global _running
@@ -169,10 +165,13 @@ actions = {
     'quit':quit,
 }
 
+def action(a):
+    global actions
+    if a in actions and callable(actions[a]):
+        actions[a]()
+
 def action_menu(*args):
-    action = menu('action', actions.keys())
-    if action in actions and callable(actions[action]):
-        actions[action]()
+    return menu('action', actions.keys())
 
 def menu(prompt, entries):
     histfn = os.path.join(HOME,'history.%s' % prompt)
@@ -203,19 +202,31 @@ def menu(prompt, entries):
     return out
 
 def execute(cmd, shell=True):
+    if not cmd:
+        return
+
     setsid = getattr(os, 'setsid', None)
     if not setsid:
         setsid = getattr(os, 'setpgrp', None)
 
-    return subprocess.Popen(cmd, shell=shell, preexec_fn=setsid)
 
-def tag_menu(*args):
-    t = menu('tag', (tag for idx,tag in _tagidxname))
-    if t:
-        set_ctl('view', t)
+    proc = subprocess.Popen(cmd, shell=shell, preexec_fn=setsid)
+    log.debug("program %s started with pid %d..." % (cmd, proc.pid))
+    return proc
+
+def set_tag(tag):
+    if tag:
+        set_ctl('view', tag)
+
+def set_client_tag(tag):
+    if tag:
+        client.write('/client/sel/tags', tag)
+
+def tag_menu():
+    return menu('tag', (tag for idx,tag in _tagidxname))
 
 keybindings = {
-        'Mod1-p':program_menu,
+        'Mod1-p':lambda _: execute(program_menu()),
         'Mod1-j':lambda _: client.write('/tag/sel/ctl', 'select down'),
         'Mod1-k':lambda _: client.write('/tag/sel/ctl', 'select up'),
         'Mod1-h':lambda _: client.write('/tag/sel/ctl', 'select left'),
@@ -227,7 +238,8 @@ keybindings = {
         'Mod1-d':lambda _: client.write('/tag/sel/ctl', 'colmode sel default-max'),
         'Mod1-s':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack-max'),
         'Mod1-m':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack+max'),
-        'Mod1-t':tag_menu,
+        'Mod1-t':lambda _: set_tag(tag_menu()),
+        'Mod1-Shift-t':lambda _: set_client_tag(tag_menu()),
         'Mod1-comma':lambda _: setviewofs(-1),
         'Mod1-period':lambda _: setviewofs(1),
         'Mod4-@':lambda key: set_tag_startswith(key[key.rfind('-')+1]),
@@ -236,7 +248,7 @@ keybindings = {
         'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1])),
         'Mod1-Shift-c':lambda _: client.write('/client/sel/ctl', 'kill'),
         'Mod1-Return':lambda _: execute(apps['terminal']),
-        'Mod1-a':action_menu,
+        'Mod1-a': lambda _: action(action_menu()),
         'Mod1-space':lambda _: client.write('/tag/sel/ctl', 'select toggle'),
         'Mod1-Shift-space':lambda _: client.write('/tag/sel/ctl', 'send sel toggle'),
         }
@@ -524,9 +536,11 @@ def mainloop():
             if event == select.POLLIN:
                 line = eventproc.stdout.readline()
                 _process_event(line)
-            elif event == select.POLLHUP:
+            elif event in (select.POLLHUP, select.POLLNVAL):
                 os.kill(eventproc.pid, signal.SIGHUP)
+                poll.unregister(eventproc.stdout.fileno())
                 eventproc = _wmiir()
+                poll.register(eventproc.stdout.fileno(), select.POLLIN)
 
         #timeout = math.ceil(process_timers()*1000)
         now = time.time()
