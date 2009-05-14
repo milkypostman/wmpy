@@ -21,9 +21,10 @@ def main():
 
     wmii.tagrules['Gran Paradiso'] = 'www'
 
-    wmii.set_theme(themes.klav)
+    wmii.set_theme(themes.subtle)
 
     wmii.apps['terminal'] = 'urxvtc'
+    wmii.keybindings['Control-Mod1-Delete'] = lambda _:wmii.execute("gnome-screensaver-command -l")
     if hostname.find('uiowa') > -1:
         #wmii.apps['terminal'] = 'gnome-terminal'
         wmii.apps['terminal'] = 'xterm'
@@ -50,10 +51,10 @@ def main():
         wmii.register_plugin(volume)
 
 
-    cpu = plugins.CPU(name='750_cpu0', cpu=0)
+    cpu = plugins.CPU(name='750_cpu0', cpu=1)
     wmii.register_plugin(cpu)
 
-    cpu = plugins.CPU(name='750_cpu1', cpu=1)
+    cpu = plugins.CPU(name='750_cpu1', cpu=2)
     wmii.register_plugin(cpu)
 
 

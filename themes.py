@@ -25,7 +25,7 @@ green = {
         }
 
 
-klav = default
+klav = default.copy()
 
 klav.update({
         'normfg' : '#afd700',
@@ -39,3 +39,15 @@ klav.update({
         })
 klav['focuswin'] = ' '.join( (klav['focusfg'], klav['focusbg'], '#e2baf1') )
 
+subtle = default.copy()
+subtle.update({
+        'normfg' : '#ffffff',
+        'normbg' : '#5d5d5d',
+        'normborder' : '#5d5d5d',
+        'focusfg' : '#ffffff',
+        'focusbg' : '#ff00a8',
+        'focusborder' : '#ff00a8',
+        'mpd_fg' : '#009ed7',
+        'clock_fg' : '#ff77da', 
+        })
+#subtle['normwin'] = ' '.join( (subtle['normfg'], subtle['normbg'], '#000000') )

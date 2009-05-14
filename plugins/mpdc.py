@@ -1,11 +1,15 @@
 import wmii
 import socket
-from collections import defaultdict
 
 try:
     import mpd
 except ImportError:
     mpd = None
+
+try:
+    from collections import defaultdict
+except ImportError:
+    defaultdict=dict
 
 class MPD:
     def __init__(self, name='1_mpd', format="%(artist)s - %(title)s", hostname='localhost', port=6600, bar='rbar'):
