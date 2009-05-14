@@ -364,15 +364,31 @@ def event_createtag(tag):
     client.create(''.join(['/lbar/', str(idx), '_', tag]), tag)
 
 def event_destroytag(tag):
-    global _tagname, _tagidx, _tagidxname, tags
-    idx = _tagidx[tag]
-    del _tagname[idx]
+    global _tagname, _tagidx, _tagidxname, tags, _tagname_reserved, colors
+    freeidx = _tagidx[tag]
     del _tagidx[tag]
+    client.remove(''.join(['/lbar/', str(freeidx), '_', tag]))
 
-    _releasetagidx(idx)
+    if freeidx not in _tagname_reserved:
+        # FIXME: gotta be an easier way to do this.
+        focusedtag = get_ctl('view')
+        for idx, tag in _tagidxname:
+            if idx > freeidx and idx not in _tagname_reserved:
+                _tagname[freeidx] = tag
+                _tagidx[tag] = freeidx
+                client.remove(''.join(['/lbar/', str(idx), '_', tag]))
+                if tag == focusedtag:
+                    color = colors['focuscolors']
+                else:
+                    color = colors['normcolors']
+                client.create(''.join(['/lbar/', str(freeidx), '_', tag]), ' '.join((color, tag)))
+                freeidx = idx
+
+        _releasetagidx(freeidx)
+
+    del _tagname[freeidx]
 
     _tagidxname = sorted(_tagname.iteritems())
-    client.remove(''.join(['/lbar/', str(idx), '_', tag]))
 
 def event_start(*vargs):
     global _running
