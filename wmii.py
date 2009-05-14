@@ -101,7 +101,8 @@ def set_client_tag_startswith(char):
                 currentidx = len(possible)
             possible.append(name)
 
-    client.write('/client/sel/tags', possible[(currentidx+1) % len(possible)])
+    if len(possible) > 0:
+        client.write('/client/sel/tags', possible[(currentidx+1) % len(possible)])
 
 def set_tag_startswith(char):
     """ Set to next tag that starts with 'char'.  Includes reserved tags. """
@@ -118,7 +119,8 @@ def set_tag_startswith(char):
                 currentidx = len(possible)
             possible.append(name)
 
-    set_ctl('view', possible[(currentidx+1) % len(possible)])
+    if len(possible) > 0:
+        set_ctl('view', possible[(currentidx+1) % len(possible)])
 
 def set_tag_idx(idx):
     global _tagname_reserved, _tagname
