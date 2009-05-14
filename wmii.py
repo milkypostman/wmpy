@@ -30,7 +30,7 @@ apps = {
 # pre-allocated tags
 tags = { 'main' : 1,
         'www' : 2,
-        'extra' : 3,
+        'dev' : 3,
         }
 
 # initialize default colors
