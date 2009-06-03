@@ -41,11 +41,15 @@ class Battery:
         data = self._parse(self.file)
 
         state = data['charging state']
-        rate = int(data['present rate'].split()[0])
         remaining = int(data['remaining capacity'].split()[0])
-        timeleft = remaining / float(rate)
-        hoursleft = int(timeleft)
-        minutesleft = (timeleft - hoursleft) * 60
+        if state == 'discharging':
+            rate = int(data['present rate'].split()[0])
+            timeleft = remaining / float(rate)
+            hoursleft = int(timeleft)
+            minutesleft = (timeleft - hoursleft) * 60
+        else:
+            hoursleft = 0
+            minutesleft = 0
 
         if remaining < self.warn:
             self.widget.fg = '#000000'
