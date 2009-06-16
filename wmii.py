@@ -47,7 +47,7 @@ colors = {
 config = {
         'font': '-*-terminus-*-*-*-*-*-*-*-*-*-*-*-*',
         'bar': 'on top',
-        'grabmod': 'Mod4',
+        'grabmod': 'Mod1',
         'view': 'main',
         #incmode = (ignore|show)
         'incmode': 'ignore',
