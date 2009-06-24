@@ -22,6 +22,7 @@ def main():
     wmii.tagrules['Gran Paradiso'] = 'www'
 
     wmii.set_theme(themes.subtle)
+    wmii.config['bar'] = 'on bottom'
 
     wmii.apps['terminal'] = 'urxvtc'
     wmii.keybindings['Control-Mod1-Delete'] = lambda _:wmii.execute("gnome-screensaver-command -l")
