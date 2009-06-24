@@ -227,12 +227,19 @@ def set_client_tag(tag):
 def tag_menu():
     return menu('tag', (tag for idx,tag in _tagidxname))
 
+def previous_client():
+    global _client_history
+    if len(_client_history):
+        cli = _client_history.pop()
+        client.write('/tag/sel/ctl', 'select %s' % cli)
+
 keybindings = {
         'Mod1-p':lambda _: execute(program_menu()),
         'Mod1-j':lambda _: client.write('/tag/sel/ctl', 'select down'),
         'Mod1-k':lambda _: client.write('/tag/sel/ctl', 'select up'),
         'Mod1-h':lambda _: client.write('/tag/sel/ctl', 'select left'),
         'Mod1-l':lambda _: client.write('/tag/sel/ctl', 'select right'),
+        'Mod1-Tab':lambda _: previous_client(),
         'Mod1-Shift-j':lambda _: client.write('/tag/sel/ctl', 'send sel down'),
         'Mod1-Shift-k':lambda _: client.write('/tag/sel/ctl', 'send sel up'),
         'Mod1-Shift-h':lambda _: client.write('/tag/sel/ctl', 'send sel left'),
@@ -428,8 +435,23 @@ def event_start(*vargs):
 
     _running = False
 
+_client_history = []
+def event_clientfocus(cli, *vargs):
+    global _client_history
+    if len(_client_history) == 0 or _client_history[-1] != cli:
+        _client_history.append(cli)
+
+    if  len(_client_history) > 10:
+        _client_history.pop(0)
+
+def event_destroyclient(cli, *vargs):
+    global _client_history
+    _client_history[:] = [c for c in _client_history if c != cli]
+
 events = {
         'Key': [event_key],
+        'ClientFocus': [event_clientfocus],
+        'DestroyClient': [event_destroyclient],
         'FocusTag': [event_focustag],
         'UnfocusTag': [event_unfocustag],
         'CreateTag': [event_createtag],
