@@ -24,6 +24,19 @@ green = {
         'weather_coldfg' : '#3a4ebe',
         }
 
+oborange = {
+        'normfg' : '#888a85',
+        'normbg' : '#6c6e6a',
+        'normborder' : '#6c6e6a',
+        'focusfg' : '#ffffff',
+        'focusbg' : '#cd5c00',
+        'focusborder' : '#fcaf3e',
+        'normwin' : '#888a85 #d3d7cf #dfe3db',
+
+        'mpd_fg' : '#fcaf3e',
+        'clock_fg' : '#ffffff',
+        }
+
 
 klav = default.copy()
 

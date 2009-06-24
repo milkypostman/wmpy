@@ -55,7 +55,7 @@ config = {
 
 # default colrules
 colrules = {
-    'main' : '65+35',
+    'main' : '100+30+10',
 }
 
 # default tagrules
