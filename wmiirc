@@ -35,9 +35,11 @@ def main():
     if hostname.startswith('murdock'):
         volume = plugins.Volume(name='805_volume', device="LineOut", step=2)
         wmii.register_plugin(volume)
+        wmii.colrules['main'] = '50+50'
 
         battery = plugins.Battery()
         wmii.register_plugin(battery)
+        wmii.set_theme(themes.klav)
 
     if hostname.startswith('baracus'):
         wmii.config['font'] =  '-artwiz-snap-*-*-*-*-*-*-*-*-*-*-*-*'
