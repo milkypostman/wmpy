@@ -21,7 +21,7 @@ def main():
 
     wmii.tagrules['Gran Paradiso'] = 'www'
 
-    wmii.set_theme(themes.subtle)
+    wmii.set_theme(themes.default)
     wmii.config['bar'] = 'on bottom'
 
     wmii.apps['terminal'] = 'urxvtc'
@@ -52,8 +52,11 @@ def main():
 
         volume = plugins.Volume(name='805_volume_2', device="PCM")
         wmii.register_plugin(volume)
-        wmii.set_theme(themes.klav)
+        wmii.set_theme(themes.oborange)
 
+
+    notice = plugins.Notice()
+    wmii.register_plugin(notice)
 
     cpu = plugins.CPU(name='750_cpu0', cpu=1)
     wmii.register_plugin(cpu)
