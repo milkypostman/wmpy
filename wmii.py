@@ -588,8 +588,10 @@ def mainloop():
         #timeout = math.ceil(process_timers()*1000)
         now = time.time()
         while _timers[0][0] <= now:
+            #sys.stdout.write(".")
             timeout, func = heapq.heappop(_timers)
             func()
+        #sys.stdout.write("\n")
 
         timeout = max(_timers[0][0] - time.time(), 1)
 

@@ -55,6 +55,9 @@ def main():
         wmii.set_theme(themes.oborange)
 
 
+    notice = plugins.Notice()
+    wmii.register_plugin(notice)
+
     cpu = plugins.CPU(name='750_cpu0', cpu=1)
     wmii.register_plugin(cpu)
 
