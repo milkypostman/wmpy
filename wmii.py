@@ -20,7 +20,7 @@ HOME=os.path.join(os.getenv('HOME'), '.wmii-hg')
 HISTORYSIZE=5
 
 #log.debug('creating new instance of client')
-client = pyxp.Wmii('unix!/tmp/ns.dcurtis.:0/wmii')
+client = pyxp.Wmii('unix!/tmp/ns.%s.:0/wmii' % os.getenv('USER'))
 
 # applications
 apps = {

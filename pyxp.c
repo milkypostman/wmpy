@@ -253,6 +253,11 @@ Wmii_ls(Wmii *self, PyObject *args)
     IxpMsg msg;
 
     fid = ixp_open(self->client, file, P9_OREAD);
+    if(fid == NULL)
+    {
+        PyErr_Format(PyExc_IOError, "Can't read directory '%s'\n", file);
+        return NULL;
+    }
     buf = malloc(fid->iounit);
 
     list = PyList_New(0);
