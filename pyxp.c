@@ -210,6 +210,11 @@ Wmii_read(Wmii *self, PyObject *args)
     PyArg_ParseTuple(args, "s", &file);
 
     fid = ixp_open(self->client, file, P9_OREAD);
+    if(fid == NULL)
+    {
+        PyErr_Format(PyExc_IOError, "Can't read file '%s'\n", file);
+        return NULL;
+    }
 
     readbuf = malloc(fid->iounit);
 

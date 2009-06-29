@@ -11,6 +11,7 @@ import sys
 import signal
 import logging
 import string
+from collections import deque
 from itertools import chain
 from operator import itemgetter
 
@@ -28,7 +29,8 @@ apps = {
 }
 
 # pre-allocated tags
-tags = { 'main' : 1,
+reserved_tags = {
+        'main' : 1,
         'www' : 2,
         'dev' : 3,
         }
@@ -65,76 +67,180 @@ tagrules = {
     'MPlayer.*': '~',
 }
 
-_tagidxheap = []
-_tagidx = {}
-_tagname = {}
-_tagname_reserved = {}
-_tagidxname = ()
-_tagidxname_reserved = ()
+
+class Tag(object):
+    """
+    This class handles all the tag operations consistent with focus,
+    urgency, and visibility.
+    """
+
+    def __init__(self, name, idx, visible=True, urgent=False):
+        self.name = name
+        self._idx = idx
+        self._urgent = urgent
+        self._focused = False
+
+        self._visible = visible
+        if self._visible:
+            self._create()
+
+    def __del__(self):
+        if self._visible:
+            self._remove()
+
+    def _getfocused(self):
+        return self._focused
+
+    def _setfocused(self, value):
+        self._focused = value
+        self._update()
+
+    focused = property(_getfocused, _setfocused)
+
+    def _getidx(self):
+        return self._idx
+
+    def _setidx(self, value):
+        if value != self._idx:
+            self._idx = value
+            self._remove()
+            self._create()
+
+    idx = property(_getidx, _setidx)
+
+    def _getvisible(self):
+        return self._visible
+
+    def _setvisible(self, value):
+        if self._visible != value:
+            if value:
+                self._create()
+            else:
+                self._remove()
+
+            self._visible = value
+
+    visible = property(_getvisible, _setvisible)
+
+    def _geturgent(self):
+        return self._urgent
+
+    def _seturgent(self, value):
+        self._urgent = value
+        self._update()
+
+    urgent = property(_geturgent, _seturgent)
+
+    def __lt__(self, other):
+        return (self.idx < other.idx) or (self.idx == other.idx and self.name < other.name)
+
+    def __le__(self, other):
+        return (self.idx <= other.idx) or (self.idx == other.idx and self.name <= other.name)
+
+    def __eq__(self, other):
+        return (self.idx == other.idx) and (self.name == other.idx)
+
+    def __gt__(self, other):
+        return (self.idx > other.idx) or (self.idx == other.idx and self.name > other.name)
+
+    def __ge__(self, other):
+        return (self.idx >= other.idx) or (self.idx == other.idx and self.name >= other.name)
+
+    def colorstr(self):
+        global colors
+        if self.focused:
+            color = colors['focuscolors']
+        else:
+            color = colors['normcolors']
+
+        if self.urgent:
+            return ' '.join((color, '*'+self.name))
+
+        return ' '.join((color, self.name))
+
+
+    def _create(self):
+        client.create(''.join(['/lbar/', str(self.idx), '_', self.name]), self.colorstr())
+
+    def _remove(self):
+        client.remove(''.join(['/lbar/', str(self.idx), '_', self.name]))
+
+    def _update(self):
+        if self._visible:
+            client.write(''.join(['/lbar/', str(self.idx), '_', self.name]), self.colorstr())
+
+_taglist = []
+_taglist_reserved = []
+_tags = {}
+_tags_idx = {}
+_tags_reserved = {}
+_tags_idx_reserved = {}
 
 _running = True
 
-def get_ctl(name):
+_urgent_clients = []
+
+def get_ctl(name, path='/ctl'):
     global client
-    for line in client.read('/ctl').split('\n'):
+    for line in client.read(path).split('\n'):
         if line.startswith(name):
             return line[line.find(' ')+1:]
 
-def set_ctl(name, value = None):
+def set_ctl(name, value = None, path='/ctl'):
     global client
     if value == None and isinstance(name, dict):
-        client.write('/ctl', '\n'.join( (' '.join((n, v)) for n,v in name.iteritems()) ))
+        client.write(path, '\n'.join( (' '.join((n, v)) for n,v in name.iteritems()) ))
     else:
-        client.write('/ctl',' '.join((name,value)))
+        client.write(path,' '.join((name,value)))
 
-def set_client_tag_startswith(char):
-    global client, _tagname_reserved, _tagname, _tagidxname_reserved
+def _tag_startswith(char):
+    global client
+    global _taglist_reserved, _tags, _tags_idx, _tags_reserved, _tags_idx_reserved
+
     currentname = get_ctl('view')
     currentidx = -1
     possible = []
-    for idx,name in chain(
-            _tagidxname_reserved,
-            (idxname for idxname in _tagidxname if idxname[1] not in tags)
+    for tag in chain(_taglist_reserved,
+            (t for t in _taglist if t.name not in _tags_reserved)
             ):
-        if name[0] == char:
-            if name == currentname:
+        tagname = tag.name
+        if tagname[0] == char:
+            if tagname == currentname:
                 currentidx = len(possible)
-            possible.append(name)
+            possible.append(tag)
 
     if len(possible) > 0:
-        client.write('/client/sel/tags', possible[(currentidx+1) % len(possible)])
+        return possible[(currentidx+1) % len(possible)]
+
+    return None
+
+
+def set_client_tag_startswith(char):
+    tag = _tag_startswith(char)
+
+    if tag is not None:
+        client.write('/client/sel/tags', tag.name)
 
 def set_tag_startswith(char):
     """ Set to next tag that starts with 'char'.  Includes reserved tags. """
-    global _tagname_reserved, _tagname, _tagidxname_reserved
-    currentname = get_ctl('view')
-    currentidx = -1
-    possible = []
-    for idx,name in chain(
-            _tagidxname_reserved,
-            (idxname for idxname in _tagidxname if idxname[1] not in tags)
-            ):
-        if name[0] == char:
-            if name == currentname:
-                currentidx = len(possible)
-            possible.append(name)
+    tag = _tag_startswith(char)
 
-    if len(possible) > 0:
-        set_ctl('view', possible[(currentidx+1) % len(possible)])
+    if tag is not None:
+        set_ctl('view', tag.name)
 
 def set_tag_idx(idx):
     global _tagname_reserved, _tagname
-    if idx in _tagname_reserved:
-        set_ctl('view', _tagname_reserved[idx])
-    elif idx in _tagname:
-        set_ctl('view', _tagname[idx])
+    if idx in _tags_idx_reserved:
+        set_ctl('view', _tags_idx_reserved[idx].name)
+    elif idx in _tags_idx:
+        set_ctl('view', _tags_idx[idx].name)
 
 def set_client_tag_idx(idx):
     global client, _tagname_reserved, _tagname
-    if idx in _tagname_reserved:
-        client.write('/client/sel/tags', _tagname_reserved[idx])
-    elif idx in _tagname:
-        client.write('/client/sel/tags', _tagname[idx])
+    if idx in _tags_idx_reserved:
+        client.write('/client/sel/tags', _tags_idx_reserved[idx].name)
+    elif idx in _tags_idx:
+        client.write('/client/sel/tags', _tags_idx[idx].name)
 
 _programlist = None
 def update_programlist():
@@ -216,16 +322,46 @@ def execute(cmd, shell=True):
     log.debug("program %s started with pid %d..." % (cmd, proc.pid))
     return proc
 
-def set_tag(tag):
-    if tag:
-        set_ctl('view', tag)
+def set_tag(name):
+    if name:
+        set_ctl('view', name)
 
-def set_client_tag(tag):
-    if tag:
-        client.write('/client/sel/tags', tag)
+def set_client_tag(name):
+    if name:
+        client.write('/client/sel/tags', name)
 
 def tag_menu():
-    return menu('tag', (tag for idx,tag in _tagidxname))
+    return menu('tag', (tag.name for tag in _taglist))
+
+def select_client(id):
+    global client
+    client.write('/tag/sel/ctl', 'select client %s' % id)
+
+def focus_urgent_client():
+    global _urgent_clients, _tags
+    global client
+
+    curtag = get_ctl('view')
+
+    while len(_urgent_clients) > 0:
+        id = _urgent_clients.pop()
+
+        try:
+            clitags = client.read('/client/%s/tags' % id).split('+')
+        except IOError:
+            continue
+
+        if curtag not in clitags:
+            clitags = dict((name, True) for name in clitags)
+            for tag in _taglist:
+                if tag.name in clitags:
+                    set_tag(tag.name)
+                    break
+
+        select_client(id)
+        break
+
+
 
 keybindings = {
         'Mod1-p':lambda _: execute(program_menu()),
@@ -237,6 +373,10 @@ keybindings = {
         'Mod1-Shift-k':lambda _: client.write('/tag/sel/ctl', 'send sel up'),
         'Mod1-Shift-h':lambda _: client.write('/tag/sel/ctl', 'send sel left'),
         'Mod1-Shift-l':lambda _: client.write('/tag/sel/ctl', 'send sel right'),
+        'Mod1-Control-j':lambda _: client.write('/tag/sel/ctl', 'nudge sel sel down'),
+        'Mod1-Control-k':lambda _: client.write('/tag/sel/ctl', 'nudge sel sel up'),
+        'Mod1-Control-h':lambda _: client.write('/tag/sel/ctl', 'nudge sel sel left'),
+        'Mod1-Control-l':lambda _: client.write('/tag/sel/ctl', 'nudge sel sel right'),
         'Mod1-d':lambda _: client.write('/tag/sel/ctl', 'colmode sel default-max'),
         'Mod1-s':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack-max'),
         'Mod1-m':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack+max'),
@@ -253,31 +393,7 @@ keybindings = {
         'Mod1-a': lambda _: action(action_menu()),
         'Mod1-space':lambda _: client.write('/tag/sel/ctl', 'select toggle'),
         'Mod1-Shift-space':lambda _: client.write('/tag/sel/ctl', 'send sel toggle'),
-        #'Mod4-m':lambda _: execute(program_menu()),
-        #'Mod4-n':lambda _: client.write('/tag/sel/ctl', 'select down'),
-        #'Mod4-p':lambda _: client.write('/tag/sel/ctl', 'select up'),
-        #'Mod4-b':lambda _: client.write('/tag/sel/ctl', 'select left'),
-        #'Mod4-f':lambda _: client.write('/tag/sel/ctl', 'select right'),
-        #'Mod4-Shift-n':lambda _: client.write('/tag/sel/ctl', 'send sel down'),
-        #'Mod4-Shift-p':lambda _: client.write('/tag/sel/ctl', 'send sel up'),
-        #'Mod4-Shift-b':lambda _: client.write('/tag/sel/ctl', 'send sel left'),
-        #'Mod4-Shift-f':lambda _: client.write('/tag/sel/ctl', 'send sel right'),
-        #'Mod4-Shift-d':lambda _: client.write('/tag/sel/ctl', 'colmode sel default-max'),
-        #'Mod4-Shift-s':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack-max'),
-        #'Mod4-Shift-m':lambda _: client.write('/tag/sel/ctl', 'colmode sel stack+max'),
-        #'Mod4-t':lambda _: set_tag(tag_menu()),
-        #'Mod4-Shift-t':lambda _: set_client_tag(tag_menu()),
-        #'Mod4-comma':lambda _: setviewofs(-1),
-        #'Mod4-period':lambda _: setviewofs(1),
-        #'Mod4-@':lambda key: set_tag_startswith(key[key.rfind('-')+1]),
-        #'Mod4-Shift-@':lambda key: set_client_tag_startswith(key[key.rfind('-')+1]),
-        #'Mod4-#':lambda key: set_tag_idx(int(key[key.rfind('-')+1])),
-        #'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1])),
-        #'Mod4-Shift-c':lambda _: client.write('/client/sel/ctl', 'kill'),
-        #'Mod4-Return':lambda _: execute(apps['terminal']),
-        #'Mod4-a': lambda _: action(action_menu()),
-        #'Mod4-space':lambda _: client.write('/tag/sel/ctl', 'select toggle'),
-        #'Mod4-Shift-space':lambda _: client.write('/tag/sel/ctl', 'send sel toggle'),
+        'Mod1-u': lambda _: focus_urgent_client(),
         }
 
 def _update_keys():
@@ -307,14 +423,14 @@ def _update_keys():
 
 def setviewofs(ofs):
     global client
-    global _tagidx
+    global _taglist
 
     view = get_ctl('view')
-    idx = _tagidxname.index( (_tagidx[view], view) )
+    idx = _taglist.index( _tags[view] )
 
-    idx,view = _tagidxname[(idx + ofs) % len(_tagidxname)]
+    tag = _taglist[(idx + ofs) % len(_taglist)]
 
-    set_ctl('view', view)
+    set_ctl('view', tag.name)
 
 def _obtaintagidx():
     global _tagidxheap
@@ -325,13 +441,25 @@ def _releasetagidx(idx):
     if idx not in _tagname_reserved:
         heapq.heappush(_tagidxheap, idx)
 
+def event_urgenttag(type, name):
+    global _tags
+    tag = _tags[name]
+    tag.urgent = True
+    pass
+
+def event_noturgenttag(type, name):
+    global _tags
+    tag = _tags[name]
+    tag.urgent = False
+    pass
+
 def event_leftbarclick(button, id):
-    global _tagname
+    global _tags_idx
     div = id.find('_')
     try:
         idx = int(id[:div])
-        tag = id[div+1:]
-        if idx in _tagname and _tagname[idx] == tag:
+        name = id[div+1:]
+        if idx in _tags_idx and _tags_idx[idx].name == name:
             set_ctl('view', tag)
     except ValueError:
         return
@@ -361,61 +489,58 @@ def event_key(key):
         func(key)
         return
 
-def event_focustag(tag):
-    global _tagidx
-    idx = _tagidx[tag]
-    client.write(''.join(['/lbar/', str(idx), '_', tag]), ' '.join(
-        (colors['focuscolors'], tag)
-    ))
+def event_focustag(name):
+    global _tags
+    tag = _tags[name]
+    tag.focused = True
 
-def event_unfocustag(tag):
-    global _tagidx
-    idx = _tagidx[tag]
-    client.write(''.join(['/lbar/', str(idx), '_', tag]), ' '.join(
-        (colors['normcolors'], tag)
-    ))
+def event_unfocustag(name):
+    global _tags
+    tag = _tags[name]
+    tag.focused = False
 
-def event_createtag(tag):
-    global _tagname, _tagidx, _tagidxname
+def _create_tag(name):
+    global  _tags, _tags_reserved, _tags_idx
 
-    if tag in tags:
-        idx = tags[tag]
+    focusedtag = get_ctl('view')
+
+    if name in _tags_reserved:
+        tag = _tags_reserved[name]
+        idx = tag.idx
+        tag.visible = True
     else:
         idx = _obtaintagidx()
+        tag = Tag(name, idx)
 
-    _tagidx[tag] = idx
-    _tagname[idx] = tag
+    _tags[name] = tag
+    _tags_idx[idx] = tag
+    if name == focusedtag:
+        tag.focused = True
 
-    _tagidxname = sorted(_tagname.iteritems())
+def event_createtag(name):
+    global _taglist, _tags
+    _create_tag(name)
+    _taglist = sorted(_tags.itervalues())
 
-    client.create(''.join(['/lbar/', str(idx), '_', tag]), tag)
+def event_destroytag(name):
+    global _tags, _tags_idx, _tags_reserved, _taglist
 
-def event_destroytag(tag):
-    global _tagname, _tagidx, _tagidxname, tags, _tagname_reserved, colors
-    freeidx = _tagidx[tag]
-    del _tagidx[tag]
-    client.remove(''.join(['/lbar/', str(freeidx), '_', tag]))
+    freetag = _tags[name]
+    freeidx = freetag.idx
+    freetag.visible = False
+    del _tags[name]
 
-    if freeidx not in _tagname_reserved:
-        # FIXME: gotta be an easier way to do this.
-        focusedtag = get_ctl('view')
-        for idx, tag in _tagidxname:
-            if idx > freeidx and idx not in _tagname_reserved:
-                _tagname[freeidx] = tag
-                _tagidx[tag] = freeidx
-                client.remove(''.join(['/lbar/', str(idx), '_', tag]))
-                if tag == focusedtag:
-                    color = colors['focuscolors']
-                else:
-                    color = colors['normcolors']
-                client.create(''.join(['/lbar/', str(freeidx), '_', tag]), ' '.join((color, tag)))
-                freeidx = idx
+    if name not in _tags_reserved:
+        for tag in _taglist:
+            if tag.idx > freeidx and tag.name not in _tags_reserved:
+                _tags_idx[freeidx] = tag
+                freeidx = tag.idx
+                tag.idx = idx
 
-        _releasetagidx(freeidx)
+    del _tags_idx[freeidx]
+    del freetag
 
-    del _tagname[freeidx]
-
-    _tagidxname = sorted(_tagname.iteritems())
+    _taglist = sorted(_tags.itervalues())
 
 def event_start(*vargs):
     global _running
@@ -428,6 +553,11 @@ def event_start(*vargs):
 
     _running = False
 
+
+def event_urgent(id, type):
+    global _urgent_clients
+    _urgent_clients.append(id)
+
 events = {
         'Key': [event_key],
         'FocusTag': [event_focustag],
@@ -437,37 +567,30 @@ events = {
         'LeftBarClick': [event_leftbarclick],
         'RightBarClick': [event_rightbarclick],
         'Start': [event_start],
+        'Urgent': [event_urgent],
+        'UrgentTag': [event_urgenttag],
+        'NotUrgentTag': [event_noturgenttag],
         }
 
 def _initialize_tags():
-    global _tagidx, _tagname, _tagidxname, _tagidxheap, _tagname_reserved, _tagidxname_reserved 
+    global _tagidx, _tag, _tagidxname, _tagidxheap, _tagname_reserved, _tag_reserved, _taglist, _taglist_reserved
+    global reserved_tags
     global client
 
-    focusedtag = get_ctl('view')
+    for name, idx in reserved_tags.iteritems():
+        tag = Tag(name, idx, False)
+        _tags_reserved[name] = tag
+        _tags_idx_reserved[idx] = tag
 
-    for tag, idx in tags.iteritems():
-        _tagname_reserved[idx] = tag
-    _tagidxname_reserved = sorted(_tagname_reserved.iteritems())
+    _taglist_reserved = sorted(_tags_reserved.itervalues())
 
-    _tagidxheap = [i for i in range(1,10) if i not in _tagname_reserved]
+    _tagidxheap = [i for i in range(1,10) if i not in _tags_idx_reserved]
     heapq.heapify(_tagidxheap)
 
-    for tag in filter(lambda n: n != 'sel', client.ls('/tag')):
-        if tag in tags:
-            idx = tags[tag]
-        else:
-            idx = _obtaintagidx()
+    for tagname in filter(lambda n: n != 'sel', client.ls('/tag')):
+        _create_tag(tagname)
 
-        _tagidx[tag] = idx
-        _tagname[idx] = tag
-        if tag == focusedtag:
-            color = colors['focuscolors']
-        else:
-            color = colors['normcolors']
-
-        client.create(''.join(['/lbar/', str(idx), '_', tag]), ' '.join((color, tag)))
-
-    _tagidxname = sorted(_tagname.iteritems())
+    _taglist = sorted(_tags.itervalues())
 
 def _configure():
     global client
@@ -621,6 +744,7 @@ class Widget:
 
     def hide(self):
         client.remove('/%s/%s' % (self.bar, self.name))
+        self.visible = False
 
     def clicked(self, button):
         pass
