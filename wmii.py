@@ -55,7 +55,7 @@ config = {
 
 # default colrules
 colrules = {
-    'main' : '100+30+10',
+        'main' : '100+%d' % (100 - (200 / (1 + math.sqrt(5))), ),
 }
 
 # default tagrules
