@@ -38,7 +38,12 @@ class Battery:
 
     def update(self):
         self.file.seek(0)
-        data = self._parse(self.file)
+        try:
+            data = self._parse(self.file)
+        except IOError:
+            wmii.schedule(60, self.update)
+            return
+
 
         state = data['charging state']
         remaining = int(data['remaining capacity'].split()[0])

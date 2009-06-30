@@ -40,7 +40,7 @@ def main():
 
         battery = plugins.Battery()
         wmii.register_plugin(battery)
-        wmii.set_theme(themes.klav)
+        wmii.set_theme(themes.oborange)
 
     if hostname.startswith('baracus'):
         wmii.config['font'] =  '-artwiz-snap-*-*-*-*-*-*-*-*-*-*-*-*'
