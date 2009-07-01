@@ -566,8 +566,6 @@ def event_urgent(id, type):
 
 events = {
         'Key': [event_key],
-        'ClientFocus': [event_clientfocus],
-        'DestroyClient': [event_destroyclient],
         'FocusTag': [event_focustag],
         'UnfocusTag': [event_unfocustag],
         'CreateTag': [event_createtag],
