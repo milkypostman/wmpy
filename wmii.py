@@ -467,7 +467,7 @@ def event_leftbarclick(button, id):
         idx = int(id[:div])
         name = id[div+1:]
         if idx in _tags_idx and _tags_idx[idx].name == name:
-            set_ctl('view', tag)
+            set_ctl('view', name)
     except ValueError:
         return
 
