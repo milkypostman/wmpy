@@ -252,10 +252,6 @@ def update_programlist():
         _programlist.append(prog.strip())
 
 def program_menu(*args):
-    global _programlist
-    if _programlist is None:
-        update_programlist()
-
     return menu('cmd', _programlist)
 
 def restart():
@@ -403,7 +399,7 @@ keybindings = {
         'Mod1-u': lambda _: focus_urgent_client(),
         }
 
-def _update_keys():
+def update_keys():
     global keybindings
     global client
     numre = re.compile('(.*-)#')
@@ -693,7 +689,8 @@ def mainloop():
     _configure()
     _initialize_tags()
     _initialize_plugins()
-    _update_keys()
+    update_programlist()
+    update_keys()
 
     eventproc = _wmiir()
     poll = select.poll()
