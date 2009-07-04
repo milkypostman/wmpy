@@ -102,8 +102,8 @@ class Tag(object):
 
     def _setidx(self, value):
         if value != self._idx:
-            self._idx = value
             self._remove()
+            self._idx = value
             self._create()
 
     idx = property(_getidx, _setidx)
@@ -283,12 +283,15 @@ def menu(prompt, entries):
 
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
+    print time.time()
     for entry in entries:
         proc.stdin.write(entry)
         proc.stdin.write('\n')
     proc.stdin.close()
+    print time.time()
 
     out = proc.stdout.read().strip()
+    print time.time()
 
     if out:
         history = []
@@ -440,8 +443,8 @@ def _obtaintagidx():
     return heapq.heappop(_tagidxheap)
 
 def _releasetagidx(idx):
-    global _tagidxheap
-    if idx not in _tagname_reserved:
+    global _tagidxheap, _tags_reserved
+    if idx not in _tags_reserved:
         heapq.heappush(_tagidxheap, idx)
 
 def event_urgenttag(type, name):
@@ -537,11 +540,10 @@ def event_destroytag(name):
         for tag in _taglist:
             if tag.idx > freeidx and tag.name not in _tags_reserved:
                 _tags_idx[freeidx] = tag
-                freeidx = tag.idx
-                tag.idx = idx
+                freeidx, tag.idx = tag.idx, freeidx
+        _releasetagidx(freeidx)
 
     del _tags_idx[freeidx]
-    del freetag
 
     _taglist = sorted(_tags.itervalues())
 
