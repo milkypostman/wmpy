@@ -29,11 +29,11 @@ apps = {
 }
 
 # pre-allocated tags
-reserved_tags = {
-        'main' : 1,
-        'www' : 2,
-        'dev' : 3,
-        }
+reserved_tags = [
+        'main',
+        'www',
+        'dev',
+        ]
 
 # initialize default colors
 colors = {
@@ -170,11 +170,7 @@ class Tag(object):
             client.write(''.join(['/lbar/', str(self.idx), '_', self.name]), self.colorstr())
 
 _taglist = []
-_taglist_reserved = []
 _tags = {}
-_tags_idx = {}
-_tags_reserved = {}
-_tags_idx_reserved = {}
 
 _running = True
 
@@ -195,23 +191,29 @@ def set_ctl(name, value = None, path='/ctl'):
 
 def _tag_startswith(char):
     global client
-    global _taglist_reserved, _tags, _tags_idx, _tags_reserved, _tags_idx_reserved
+    global _taglist_reserved, _tags
 
     currentname = get_ctl('view')
     currentidx = -1
     possible = []
-    for tag in chain(_taglist_reserved,
-            (t for t in _taglist if t.name not in _tags_reserved)
-            ):
+    for tag in _taglist:
         tagname = tag.name
         if tagname[0] == char:
             if tagname == currentname:
                 currentidx = len(possible)
             possible.append(tag)
-
+    #for tag in chain(_taglist_reserved,
+            #(t for t in _taglist if t.name not in _tags_reserved)
+            #):
+        #tagname = tag.name
+        #if tagname[0] == char:
+            #if tagname == currentname:
+                #currentidx = len(possible)
+            #possible.append(tag)
+#
     if len(possible) > 0:
         return possible[(currentidx+1) % len(possible)]
-
+#
     return None
 
 
@@ -230,17 +232,21 @@ def set_tag_startswith(char):
 
 def set_tag_idx(idx):
     global _tagname_reserved, _tagname
-    if idx in _tags_idx_reserved:
-        set_ctl('view', _tags_idx_reserved[idx].name)
-    elif idx in _tags_idx:
-        set_ctl('view', _tags_idx[idx].name)
+    #if idx in _tags_idx_reserved:
+        #set_ctl('view', _tags_idx_reserved[idx].name)
+    #elif idx in _tags_idx:
+        #set_ctl('view', _tags_idx[idx].name)
+    if idx < len(_taglist):
+        set_ctl('view', _taglist[idx].name)
 
 def set_client_tag_idx(idx):
     global client, _tagname_reserved, _tagname
-    if idx in _tags_idx_reserved:
-        client.write('/client/sel/tags', _tags_idx_reserved[idx].name)
-    elif idx in _tags_idx:
-        client.write('/client/sel/tags', _tags_idx[idx].name)
+    #if idx in _tags_idx_reserved:
+        #client.write('/client/sel/tags', _tags_idx_reserved[idx].name)
+    #elif idx in _tags_idx:
+        #client.write('/client/sel/tags', _tags_idx[idx].name)
+    if idx < len(_taglist):
+        client.write('/client/sel/tags', _taglist[idx].name)
 
 _programlist = None
 def update_programlist():
@@ -283,15 +289,12 @@ def menu(prompt, entries):
 
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-    print time.time()
     for entry in entries:
         proc.stdin.write(entry)
         proc.stdin.write('\n')
     proc.stdin.close()
-    print time.time()
 
     out = proc.stdout.read().strip()
-    print time.time()
 
     if out:
         history = []
@@ -392,8 +395,8 @@ keybindings = {
         'Mod1-period':lambda _: setviewofs(1),
         'Mod4-@':lambda key: set_tag_startswith(key[key.rfind('-')+1]),
         'Mod4-Shift-@':lambda key: set_client_tag_startswith(key[key.rfind('-')+1]),
-        'Mod4-#':lambda key: set_tag_idx(int(key[key.rfind('-')+1])),
-        'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1])),
+        'Mod4-#':lambda key: set_tag_idx(int(key[key.rfind('-')+1])-1),
+        'Mod4-Shift-#':lambda key: set_client_tag_idx(int(key[key.rfind('-')+1]-1)),
         'Mod1-Shift-c':lambda _: client.write('/client/sel/ctl', 'kill'),
         'Mod1-Return':lambda _: execute(apps['terminal']),
         'Mod1-a': lambda _: action(action_menu()),
@@ -465,8 +468,10 @@ def event_leftbarclick(button, id):
     try:
         idx = int(id[:div])
         name = id[div+1:]
-        if idx in _tags_idx and _tags_idx[idx].name == name:
+        if idx < len(_taglist):
             set_ctl('view', name)
+        #if idx in _tags_idx and _tags_idx[idx].name == name:
+            #set_ctl('view', name)
     except ValueError:
         return
 
@@ -506,27 +511,41 @@ def event_unfocustag(name):
     tag.focused = False
 
 def _create_tag(name):
-    global  _tags, _tags_reserved, _tags_idx
+    #global  _tags, _tags_reserved, _tags_idx
 
     focusedtag = get_ctl('view')
 
-    if name in _tags_reserved:
-        tag = _tags_reserved[name]
-        idx = tag.idx
-        tag.visible = True
-    else:
-        idx = _obtaintagidx()
-        tag = Tag(name, idx)
+    #if name in _tags_reserved:
+        #tag = _tags_reserved[name]
+        #idx = tag.idx
+        #tag.visible = True
+    #else:
+        #idx = _obtaintagidx()
+        #tag = Tag(name, idx)
+#
+    idx = len(_taglist)
+    if name in reserved_tags:
+        idx = reserved_tags.index(name)
+        if idx > len(_taglist):
+            idx = len(_taglist)
+
+    tag = Tag(name, idx)
+
+    _taglist.insert(idx, tag)
+
+    for i in xrange(idx+1, len(_taglist)):
+        t = _taglist[i]
+        t.idx = i
 
     _tags[name] = tag
-    _tags_idx[idx] = tag
     if name == focusedtag:
         tag.focused = True
+
+    return tag
 
 def event_createtag(name):
     global _taglist, _tags
     _create_tag(name)
-    _taglist = sorted(_tags.itervalues())
 
 def event_destroytag(name):
     global _tags, _tags_idx, _tags_reserved, _taglist
@@ -535,17 +554,15 @@ def event_destroytag(name):
     freeidx = freetag.idx
     freetag.visible = False
     del _tags[name]
+    del _taglist[freeidx]
 
-    if name not in _tags_reserved:
-        for tag in _taglist:
-            if tag.idx > freeidx and tag.name not in _tags_reserved:
-                _tags_idx[freeidx] = tag
-                freeidx, tag.idx = tag.idx, freeidx
-        _releasetagidx(freeidx)
+    #if name not in _tags_reserved:
+    for i in xrange(freeidx, len(_taglist)):
+        #for tag in _taglist:
+        #if tag.idx > freeidx and tag.name not in _tags_reserved:
+        _taglist[i].idx = i
 
-    del _tags_idx[freeidx]
-
-    _taglist = sorted(_tags.itervalues())
+    #_taglist = sorted(_tags.itervalues())
 
 def event_start(*vargs):
     global _running
@@ -577,19 +594,19 @@ events = {
         }
 
 def _initialize_tags():
-    global _tagidx, _tag, _tagidxname, _tagidxheap, _tagname_reserved, _tag_reserved, _taglist, _taglist_reserved
-    global reserved_tags
-    global client
+    #global _tagidx, _tag, _tagidxname, _tagidxheap, _tagname_reserved, _tag_reserved, _taglist, _taglist_reserved
+    #global reserved_tags
+    #global client
 
-    for name, idx in reserved_tags.iteritems():
-        tag = Tag(name, idx, False)
-        _tags_reserved[name] = tag
-        _tags_idx_reserved[idx] = tag
+    #for name, idx in reserved_tags.iteritems():
+        #tag = Tag(name, idx, False)
+        #_tags_reserved[name] = tag
+        #_tags_idx_reserved[idx] = tag
 
-    _taglist_reserved = sorted(_tags_reserved.itervalues())
+    #_taglist_reserved = sorted(_tags_reserved.itervalues())
 
-    _tagidxheap = [i for i in range(1,10) if i not in _tags_idx_reserved]
-    heapq.heapify(_tagidxheap)
+    #_tagidxheap = [i for i in range(1,10) if i not in _tags_idx_reserved]
+    #heapq.heapify(_tagidxheap)
 
     for tagname in filter(lambda n: n != 'sel', client.ls('/tag')):
         _create_tag(tagname)
