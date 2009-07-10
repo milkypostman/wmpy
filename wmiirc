@@ -19,7 +19,7 @@ def main():
 
     hostname = socket.gethostname()
 
-    wmii.tagrules['Gran Paradiso'] = 'www'
+    wmii.tagrules['Shiretoko'] = 'www'
 
     wmii.set_theme(themes.default)
     wmii.config['bar'] = 'on bottom'
