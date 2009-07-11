@@ -28,7 +28,8 @@ class Notice:
 
         self._build_colors()
 
-        wmii.events['Notice'] = wmii.events.get('Notice', []).append(self.message)
+        wmii.events['Notice'] = event = wmii.events.get('Notice', [])
+        event.append(self.message)
 
         self.update()
 
