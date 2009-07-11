@@ -283,15 +283,12 @@ def menu(prompt, entries):
 
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-    print time.time()
     for entry in entries:
         proc.stdin.write(entry)
         proc.stdin.write('\n')
     proc.stdin.close()
-    print time.time()
 
     out = proc.stdout.read().strip()
-    print time.time()
 
     if out:
         history = []
