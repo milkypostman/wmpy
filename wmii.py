@@ -684,6 +684,7 @@ def _process_event(event):
     event = edata[0]
     rest = edata[1:]
 
+    print "Event:", event
     for handler in events.get(event, []):
         handler(*rest)
 
