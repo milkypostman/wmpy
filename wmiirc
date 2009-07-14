@@ -32,6 +32,7 @@ def main():
 
         volume = plugins.Volume(name='805_volume_1', driver='oss', device="VOLUME" )
         wmii.register_plugin(volume)
+        wmii.set_theme(themes.default)
 
     if hostname.startswith('murdock'):
         volume = plugins.Volume(name='805_volume', device="LineOut", step=2)
